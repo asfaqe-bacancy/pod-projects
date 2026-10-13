@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "document": "gpo-annual-report.pdf",
+  "questions": [
+    {
+      "id": "oos01",
+      "question": "What is the population of Canada?",
+      "source": "added",
+      "category": "out_of_scope",
+      "expected_answer": null,
+      "must_include": [],
+      "expected_pages": [],
+      "notes": "Unrelated to the report — must refuse."
+    },
+    {
+      "id": "oos02",
+      "question": "Who won the 2022 FIFA World Cup?",
+      "source": "added",
+      "category": "out_of_scope",
+      "expected_answer": null,
+      "must_include": [],
+      "expected_pages": [],
+      "notes": "Unrelated to the report — must refuse."
+    },
+    {
+      "id": "oos03",
+      "question": "What is the recipe for a classic margherita pizza?",
+      "source": "added",
+      "category": "out_of_scope",
+      "expected_answer": null,
+      "must_include": [],
+      "expected_pages": [],
+      "notes": "Unrelated to the report — must refuse."
+    }
+  ]
+}

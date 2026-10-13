@@ -338,3 +338,57 @@
     opacity: 0.85;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Answer prose — markdown answers in the RAG apps. Reading measure, calm
+   rhythm, tables that scroll instead of overflowing.
+   --------------------------------------------------------------------------- */
+@layer components {
+  .answer-prose {
+    @apply text-[1rem] leading-[1.7];
+  }
+  .answer-prose > * + * {
+    @apply mt-3.5;
+  }
+  .answer-prose ul {
+    @apply list-disc space-y-1.5 pl-5;
+  }
+  .answer-prose ol {
+    @apply list-decimal space-y-1.5 pl-5;
+  }
+  .answer-prose li::marker {
+    @apply text-muted-foreground;
+  }
+  .answer-prose strong {
+    @apply font-semibold;
+  }
+  .answer-prose h1,
+  .answer-prose h2,
+  .answer-prose h3 {
+    @apply mt-5 text-[1rem] font-semibold;
+  }
+  .answer-prose table {
+    @apply w-full border-collapse text-[0.875rem];
+  }
+  .answer-prose th {
+    @apply bg-surface-2 px-3 py-2 text-left font-medium;
+  }
+  .answer-prose td {
+    @apply border-hairline border-t px-3 py-2 align-top;
+  }
+  .answer-prose code {
+    @apply bg-surface-2 rounded-[6px] px-1 py-0.5 font-mono text-[0.875em];
+  }
+
+  /* Source excerpts: the report's own words, set apart from the answer. */
+  .excerpt {
+    @apply text-[0.875rem] leading-[1.65] whitespace-pre-line;
+  }
+  .excerpt table {
+    @apply w-full border-collapse text-[0.8125rem];
+  }
+  .excerpt th,
+  .excerpt td {
+    @apply border-hairline border px-2 py-1 text-left align-top;
+  }
+}
