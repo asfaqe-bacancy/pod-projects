@@ -26,7 +26,7 @@ export interface PodProject {
 export const HUB = {
   name: "POD",
   /** Production URL of the hub. Undefined until the Vercel project exists. */
-  url: undefined as string | undefined,
+  url: "https://pod-projects.vercel.app" as string | undefined,
   devPort: 3000,
 };
 
@@ -40,7 +40,7 @@ export const PROJECTS: PodProject[] = [
       "Upload your material, say how much time you have, and get a focused plan, lessons, quizzes and a mock interview — all grounded in your own documents.",
     focus: ["RAG", "Quizzes", "Mock interview", "Weak-area tracking"],
     status: "live",
-    url: undefined,
+    url: "https://lastminprep-lemon.vercel.app",
     devPort: 3004,
   },
   {
