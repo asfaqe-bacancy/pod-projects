@@ -52,7 +52,7 @@ export const PROJECTS: PodProject[] = [
       "A clean, measured RAG pipeline — ingestion, chunking, embeddings, retrieval and cited answers — validated against the sample questions.",
     focus: ["Chunking", "Embeddings", "Vector search", "Evaluation"],
     status: "in-progress",
-    url: undefined,
+    url: "https://pod-projects-31bc.vercel.app",
     devPort: 3001,
   },
   {
@@ -64,7 +64,7 @@ export const PROJECTS: PodProject[] = [
       "Section-aware retrieval over a ~200-page report: hierarchical chunks, metadata filters, hybrid search, reranking and context budgeting, proven with an ablation.",
     focus: ["Hierarchical chunks", "Hybrid search", "Reranking", "Ablation"],
     status: "in-progress",
-    url: undefined,
+    url: "https://pod-projects-35h7.vercel.app",
     devPort: 3002,
   },
   {
@@ -76,7 +76,7 @@ export const PROJECTS: PodProject[] = [
       "Answers drawn from tables, charts and footnotes, not just paragraphs — with extraction techniques compared against hand-labelled ground truth.",
     focus: ["Tables", "Charts", "Footnotes", "Vision extraction"],
     status: "in-progress",
-    url: undefined,
+    url: "https://pod-projects-utgz.vercel.app",
     devPort: 3003,
   },
 ];
