@@ -38,3 +38,18 @@ Start here. Read in this order.
 - [ ] The sample questions → `eval/questions.json` (format in 10-evaluation.md)
 - [ ] `GEMINI_API_KEY`
 - [ ] A Supabase project (URL + service role key)
+
+## Implementation notes (built 2026-10-13)
+
+The app is built; see `../README.md` for setup and commands. Where the build
+differs from these docs:
+
+- **Database access.** Each app has its own Postgres role and schema in the
+  shared Supabase project (`supabase/bootstrap.sql`) and connects with
+  `DATABASE_URL` through postgres.js, instead of `SUPABASE_URL` plus a
+  service-role key. Isolation comes from Postgres grants, not RLS, and
+  `check:setup` verifies it.
+- **Shared code.** It lives in the monorepo packages `@pod/ai`, `@pod/rag`,
+  `@pod/db`, `@pod/eval` and `@pod/ui` rather than being copied between apps.
+- **Commands.** They are `pnpm` scripts. From the repo root, use
+  `pnpm --filter <app> <script>`.

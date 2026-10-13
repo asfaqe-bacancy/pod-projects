@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "questions": [
+    {
+      "id": "oos01",
+      "question": "What is the battery life of the iPhone 15?",
+      "source": "added",
+      "category": "out_of_scope",
+      "answer_location": [],
+      "expected_answer": null,
+      "must_include": [],
+      "expected_values": [],
+      "expected_elements": [],
+      "notes": "Another Apple product — must refuse."
+    },
+    {
+      "id": "oos02",
+      "question": "Who won the 2022 FIFA World Cup?",
+      "source": "added",
+      "category": "out_of_scope",
+      "answer_location": [],
+      "expected_answer": null,
+      "must_include": [],
+      "expected_values": [],
+      "expected_elements": [],
+      "notes": "Unrelated — must refuse."
+    },
+    {
+      "id": "oos03",
+      "question": "What is the recipe for a classic margherita pizza?",
+      "source": "added",
+      "category": "out_of_scope",
+      "answer_location": [],
+      "expected_answer": null,
+      "must_include": [],
+      "expected_values": [],
+      "expected_elements": [],
+      "notes": "Unrelated — must refuse."
+    }
+  ]
+}

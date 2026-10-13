@@ -16,9 +16,16 @@ Each project's plan lives in its own `docs/` folder (start with `docs/README.md`
 
 ```text
 apps/            one Next.js app per project, each its own Vercel project
-packages/config  shared tsconfig + ESLint rules  (@pod/config)
-packages/ui      shared design system + components + project list  (@pod/ui)
+packages/config  shared tsconfig + ESLint rules                       (@pod/config)
+packages/ui      design system, project list, shared RAG screens' parts (@pod/ui)
+packages/ai      Gemini client, embeddings, error mapping, fake embedder (@pod/ai)
+packages/rag     PDF text/outline, cleaning, splitting, citations, NDJSON, RRF, env/http helpers (@pod/rag)
+packages/db      postgres.js per-app role, migrations, setup checks, PGlite test server (@pod/db)
+packages/eval    retrieval metrics, LLM judges, report helpers       (@pod/eval)
 ```
+
+Packages export behaviour only. They never read env vars or pick a
+database: each app passes in its own keys and connection string.
 
 The list of projects (names, briefs, production URLs) is in
 `packages/ui/src/projects.ts` — the hub and every project page read it.
@@ -31,8 +38,12 @@ Requires Node 22 (`nvm use`) and pnpm via Corepack (`corepack enable`).
 pnpm install
 pnpm dev                         # every app at once, on the ports above
 pnpm --filter gpo-report dev     # one app
-pnpm check                       # lint + typecheck + build, all workspaces
+pnpm test                        # unit + end-to-end tests (in-memory Postgres + pgvector)
+pnpm check                       # lint + typecheck + test + build, all workspaces
 ```
+
+Each RAG app's own README covers its pipeline commands (`parse`, `ingest`,
+`ask`, `eval`, …) and setup.
 
 ## Deploying
 
@@ -52,6 +63,8 @@ exist, put their production URLs into `packages/ui/src/projects.ts`.
 ## Isolation
 
 Apps never share runtime state: separate deployments, separate env vars, and
-(once databases are added) a separate Postgres schema and login role per app.
+a separate Postgres schema and login role per RAG app (`gpo`, `worldbank`,
+`imac`) in one Supabase project. Each role can read only its own schema;
+`check:setup` verifies that.
 `interview-prep/` is ignored by this repo until it is moved in, with a
 baseline test before and after.
