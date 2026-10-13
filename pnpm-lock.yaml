@@ -182,28 +182,73 @@ importers:
 
   apps/world-bank-report:
     dependencies:
+      '@pod/ai':
+        specifier: workspace:*
+        version: link:../../packages/ai
+      '@pod/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@pod/eval':
+        specifier: workspace:*
+        version: link:../../packages/eval
+      '@pod/rag':
+        specifier: workspace:*
+        version: link:../../packages/rag
       '@pod/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      lucide-react:
+        specifier: ^1.47.0
+        version: 1.56.0(@types/react@19.3.0)(react@19.2.8)
       next:
         specifier: 16.3.5
-        version: 16.3.5(@types/node@20.19.43)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+        version: 16.3.5(@babel/core@7.29.7)(@types/node@22.20.5)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      pdf-lib:
+        specifier: ^1.17.1
+        version: 1.17.1
       react:
         specifier: 19.2.8
         version: 19.2.8
       react-dom:
         specifier: 19.2.8
         version: 19.2.8(react@19.2.8)
+      remark-gfm:
+        specifier: ^4.0.1
+        version: 4.0.1
+      remark-parse:
+        specifier: ^11.0.0
+        version: 11.0.0
+      server-only:
+        specifier: ^0.0.1
+        version: 0.0.1
+      unified:
+        specifier: ^11.0.5
+        version: 11.0.5
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
     devDependencies:
+      '@electric-sql/pglite':
+        specifier: ^0.5.9
+        version: 0.5.9
+      '@electric-sql/pglite-pgvector':
+        specifier: ^0.0.10
+        version: 0.0.10(@electric-sql/pglite@0.5.9)
+      '@electric-sql/pglite-socket':
+        specifier: ^0.2.12
+        version: 0.2.12(@electric-sql/pglite-age@0.0.10(@electric-sql/pglite@0.5.9))(@electric-sql/pglite-pg_hashids@0.0.10(@electric-sql/pglite@0.5.9))(@electric-sql/pglite-pg_ivm@0.0.10(@electric-sql/pglite@0.5.9))(@electric-sql/pglite-pg_textsearch@0.0.11(@electric-sql/pglite@0.5.9))(@electric-sql/pglite-pg_uuidv7@0.0.10(@electric-sql/pglite@0.5.9))(@electric-sql/pglite-pgtap@0.0.10(@electric-sql/pglite@0.5.9))(@electric-sql/pglite-pgvector@0.0.10(@electric-sql/pglite@0.5.9))(@electric-sql/pglite@0.5.9)
       '@pod/config':
         specifier: workspace:*
         version: link:../../packages/config
       '@tailwindcss/postcss':
         specifier: ^4
         version: 4.3.3
+      '@types/mdast':
+        specifier: ^4.0.4
+        version: 4.0.4
       '@types/node':
-        specifier: ^20
-        version: 20.19.43
+        specifier: ^22
+        version: 22.20.5
       '@types/react':
         specifier: ^19
         version: 19.3.0
@@ -219,9 +264,15 @@ importers:
       tailwindcss:
         specifier: ^4
         version: 4.3.3
+      tsx:
+        specifier: ^4.23.15
+        version: 4.23.15
       typescript:
         specifier: ^5
         version: 5.9.3
+      vitest:
+        specifier: ^5.0.4
+        version: 5.0.4(@types/node@22.20.5)(vite@8.3.4(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))
 
   packages/ai:
     dependencies:
@@ -321,6 +372,9 @@ importers:
       unpdf:
         specifier: ^1.8.1
         version: 1.8.1
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
     devDependencies:
       '@pod/config':
         specifier: workspace:*

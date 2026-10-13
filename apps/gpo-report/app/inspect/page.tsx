@@ -1,6 +1,6 @@
 import { AppShell } from "@pod/ui/rag/app-shell";
 import { InspectScreen } from "@/components/inspect/inspect-screen";
-import { PageIntro } from "@/components/page-intro";
+import { PageIntro } from "@pod/ui/rag/page-intro";
 import { RunBadge } from "@/components/run-badge";
 import { SetupState } from "@/components/setup-state";
 import { pageBounds } from "@/lib/db/chunks";

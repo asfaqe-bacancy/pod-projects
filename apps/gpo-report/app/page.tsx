@@ -1,6 +1,6 @@
 import { AppShell } from "@pod/ui/rag/app-shell";
 import { AskScreen } from "@/components/ask/ask-screen";
-import { PageIntro } from "@/components/page-intro";
+import { PageIntro } from "@pod/ui/rag/page-intro";
 import { RunBadge } from "@/components/run-badge";
 import { SetupState } from "@/components/setup-state";
 import { NAV } from "@/lib/nav";

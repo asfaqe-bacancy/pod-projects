@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "questions": [
+    {
+      "id": "oos01",
+      "question": "What was the population of Canada in 1850?",
+      "source": "added",
+      "category": "out_of_scope",
+      "expected_answer": null,
+      "must_include": [],
+      "expected_pages": [],
+      "expected_sections": [],
+      "notes": "Unrelated to the report — must refuse."
+    },
+    {
+      "id": "oos02",
+      "question": "Who won the 2022 FIFA World Cup?",
+      "source": "added",
+      "category": "out_of_scope",
+      "expected_answer": null,
+      "must_include": [],
+      "expected_pages": [],
+      "expected_sections": [],
+      "notes": "Unrelated to the report — must refuse."
+    },
+    {
+      "id": "oos03",
+      "question": "What is the best recipe for sourdough bread?",
+      "source": "added",
+      "category": "out_of_scope",
+      "expected_answer": null,
+      "must_include": [],
+      "expected_pages": [],
+      "expected_sections": [],
+      "notes": "Unrelated to the report — must refuse."
+    }
+  ]
+}

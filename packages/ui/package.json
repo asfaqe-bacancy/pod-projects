@@ -29,7 +29,9 @@
     "./rag/states": "./src/rag/states.tsx",
     "./rag/select": "./src/rag/select.tsx",
     "./rag/tabs": "./src/rag/tabs.tsx",
-    "./rag/use-ndjson-stream": "./src/rag/use-ndjson-stream.ts"
+    "./rag/use-ndjson-stream": "./src/rag/use-ndjson-stream.ts",
+    "./rag/page-intro": "./src/rag/page-intro.tsx",
+    "./rag/setup-state": "./src/rag/setup-state.tsx"
   },
   "scripts": {
     "lint": "eslint .",

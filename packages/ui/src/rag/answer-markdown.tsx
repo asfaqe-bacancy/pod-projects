@@ -41,9 +41,13 @@ export function AnswerMarkdown({
     });
   }
 
-  const cite =
-    (Tag: "p" | "li" | "td" | "th" | "strong" | "em") =>
-    ({ children }: { children?: ReactNode }) => <Tag>{withCitations(children)}</Tag>;
+  function cite(Tag: "p" | "li" | "td" | "th" | "strong" | "em") {
+    function WithCitations({ children }: { children?: ReactNode }) {
+      return <Tag>{withCitations(children)}</Tag>;
+    }
+    WithCitations.displayName = `Cite(${Tag})`;
+    return WithCitations;
+  }
 
   const components: Components = {
     p: cite("p"),
