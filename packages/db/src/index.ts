@@ -51,12 +51,17 @@ export function fromVector(text: string): number[] {
  * `check:setup` fails if this isn't empty — the isolation promise, tested.
  */
 export async function foreignReadableTables(sql: Sql, ownSchema: string): Promise<string[]> {
+  // OIDs, not names: resolving "realtime.x" by name already fails without
+  // USAGE on that schema. Reading needs both USAGE on the schema and SELECT.
   const rows = await sql<{ name: string }[]>`
-    select table_schema || '.' || table_name as name
-    from information_schema.tables
-    where table_schema not in (${ownSchema}, 'extensions', 'pg_catalog', 'information_schema')
-      and table_schema not like 'pg_%'
-      and has_table_privilege(current_user, quote_ident(table_schema) || '.' || quote_ident(table_name), 'select')
+    select n.nspname || '.' || c.relname as name
+    from pg_class c
+    join pg_namespace n on n.oid = c.relnamespace
+    where c.relkind in ('r', 'p', 'v', 'm', 'f')
+      and n.nspname not in (${ownSchema}, 'extensions', 'pg_catalog', 'information_schema')
+      and n.nspname not like 'pg\\_%'
+      and has_schema_privilege(n.oid, 'usage')
+      and has_table_privilege(c.oid, 'select')
     order by 1
   `;
   return rows.map((row) => row.name);

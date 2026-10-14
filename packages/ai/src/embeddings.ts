@@ -48,6 +48,16 @@ export function createGeminiEmbedder({
   /** Texts per request. Batches run one after another to stay under rate limits. */
   batchSize?: number;
 }): Embedder {
+  /**
+   * Queries are live — a person is waiting — so they retry briefly. Document
+   * batches run offline during ingestion and can wait out a per-minute limit
+   * (4 + 8 + 16 + 32 + 64 s ≈ 2 min), honouring Gemini's own retry delay.
+   */
+  const RETRY = {
+    RETRIEVAL_QUERY: { attempts: 5 },
+    RETRIEVAL_DOCUMENT: { attempts: 6, baseDelayMs: 4_000, maxWaitMs: 65_000 },
+  } as const;
+
   async function embed(
     texts: string[],
     taskType: "RETRIEVAL_DOCUMENT" | "RETRIEVAL_QUERY",
@@ -61,7 +71,7 @@ export function createGeminiEmbedder({
           contents: texts,
           config: { taskType, outputDimensionality: dimensions },
         }),
-      { attempts: 5 },
+      RETRY[taskType],
     );
 
     const embeddings = response.embeddings ?? [];
