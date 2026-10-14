@@ -64,7 +64,7 @@ export async function* answerStream(
   } catch (cause) {
     const failure = describeGeminiError(cause);
     error = cause instanceof Error ? cause.message : String(cause);
-    yield { type: "error", message: failure.message, retryable: failure.retryable };
+    yield { type: "error", message: failure.message, retryable: failure.retryable, code: failure.kind };
   }
 
   const latencyMs = performance.now() - started;
@@ -108,6 +108,8 @@ export interface AnswerResult {
   latencyMs: number;
   firstTokenMs: number | null;
   error: string | null;
+  /** GeminiErrorKind when the model failed, e.g. "quota". */
+  errorCode: string | null;
 }
 
 export async function answerOnce(
@@ -126,6 +128,7 @@ export async function answerOnce(
     latencyMs: 0,
     firstTokenMs: null,
     error: null,
+    errorCode: null,
   };
 
   for await (const event of answerStream(deps, run, question, options)) {
@@ -144,6 +147,7 @@ export async function answerOnce(
       });
     } else if (event.type === "error") {
       result.error = event.message;
+      result.errorCode = event.code ?? null;
     }
   }
   return result;

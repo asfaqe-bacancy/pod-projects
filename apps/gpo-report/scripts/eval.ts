@@ -66,6 +66,10 @@ try {
     }
 
     const answer = await answerOnce(services, run, question.question, { mode, topK, source: "eval" });
+
+    // Every later question would fail the same way — stop instead of recording N errors.
+
+    if (answer.errorCode === "quota") throw new Error(`Stopped at ${question.id}: ${answer.error}`);
     const chunks = answer.retrieval?.chunks ?? [];
     const result: QuestionResult = {
       ...scoreRetrieval(question, chunks, labelled),

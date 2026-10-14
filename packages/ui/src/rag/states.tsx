@@ -1,4 +1,4 @@
-import { AlertCircle, Info } from "lucide-react";
+import { AlertCircle, Gauge, Info } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "../cn";
 
@@ -14,6 +14,30 @@ export function ErrorNote({ message, action }: { message: string; action?: React
       {action}
     </div>
   );
+}
+
+/**
+ * The app's Gemini quota is used up for the day. Not the visitor's fault and
+ * not fixed by retrying, so it gets its own look and no "Try again" button.
+ */
+export function QuotaNote({ message }: { message: string }) {
+  return (
+    <div
+      role="alert"
+      className="border-caution/30 bg-caution/[0.08] rounded-panel flex items-start gap-3 border px-4 py-3 text-sm"
+    >
+      <Gauge className="text-caution mt-0.5 size-4 shrink-0" aria-hidden />
+      <div className="min-w-0 flex-1">
+        <p className="font-medium">Daily AI quota reached</p>
+        <p className="text-muted-foreground mt-0.5">{message}</p>
+      </div>
+    </div>
+  );
+}
+
+/** A failed request: the quota alert when that's the cause, otherwise an error with the given action. */
+export function FailureNote({ message, code, action }: { message: string; code?: string | null; action?: ReactNode }) {
+  return code === "quota" ? <QuotaNote message={message} /> : <ErrorNote message={message} action={action} />;
 }
 
 /** Neutral information — e.g. a refusal is an answer, not an error. */

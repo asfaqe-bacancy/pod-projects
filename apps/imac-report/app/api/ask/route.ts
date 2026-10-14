@@ -1,3 +1,4 @@
+import { describeGeminiError } from "@pod/ai";
 import { ndjsonResponse } from "@pod/rag/ndjson";
 import { DEFAULT_PRESET } from "@/lib/config";
 import { askBodySchema, jsonError, rateLimit, readJson } from "@/lib/http";
@@ -29,6 +30,11 @@ export async function POST(request: Request) {
     }
   }
   return ndjsonResponse(events(), {
-    onError: () => ({ type: "error" as const, message: "Something went wrong while answering. Try again.", retryable: true }),
+    onError: (cause) => {
+      const failure = describeGeminiError(cause);
+      return failure.kind === "error"
+        ? { type: "error" as const, message: "Something went wrong while answering. Try again.", retryable: true }
+        : { type: "error" as const, message: failure.message, retryable: failure.retryable, code: failure.kind };
+    },
   });
 }

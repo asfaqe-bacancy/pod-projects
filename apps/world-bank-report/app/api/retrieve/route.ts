@@ -1,5 +1,6 @@
+import { GeminiError } from "@pod/ai";
 import { DEFAULT_PRESET } from "@/lib/config";
-import { askBodySchema, jsonError, rateLimit, readJson } from "@/lib/http";
+import { askBodySchema, jsonError, modelErrorResponse, rateLimit, readJson } from "@/lib/http";
 import { NotIngestedError, runRetrieval } from "@/lib/retrieval/pipeline";
 import { getAppStatus, getServices } from "@/lib/server";
 
@@ -29,6 +30,8 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     if (error instanceof NotIngestedError) return jsonError(error.message, 409);
+    // Quota, rate limit, bad key: say so — the visitor can act on these.
+    if (error instanceof GeminiError && error.kind !== "error") return modelErrorResponse(error);
     console.error("[worldbank] retrieve failed:", error);
     return jsonError("Retrieval failed. Try again in a moment.", 502);
   }

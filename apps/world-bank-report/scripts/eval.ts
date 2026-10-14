@@ -60,6 +60,8 @@ try {
           continue;
         }
         const answer = await answerOnce(services, runs, q.question, { preset, source: "eval" });
+        // Every later question would fail the same way — stop instead of recording N errors.
+        if (answer.errorCode === "quota") throw new Error(`Stopped at ${q.id}: ${answer.error}`);
         const outcome = answer.outcome;
         const r: QuestionResult = {
           ...scoreRetrieval(q, preset, outcome?.final ?? [], outcome?.sources ?? [], labelled),

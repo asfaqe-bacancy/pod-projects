@@ -68,7 +68,7 @@ export async function* answerStream(
   } catch (cause) {
     const failure = describeGeminiError(cause);
     error = cause instanceof Error ? cause.message : String(cause);
-    yield { type: "error", message: cause instanceof Error && cause.name === "NotIngestedError" ? cause.message : failure.message, retryable: failure.retryable };
+    yield { type: "error", message: cause instanceof Error && cause.name === "NotIngestedError" ? cause.message : failure.message, retryable: failure.retryable, code: failure.kind };
   }
 
   const latencyMs = performance.now() - started;
@@ -117,6 +117,8 @@ export interface AnswerResult {
   latencyMs: number;
   firstTokenMs: number | null;
   error: string | null;
+  /** GeminiErrorKind when the model failed, e.g. "quota". */
+  errorCode: string | null;
 }
 
 export async function answerOnce(
@@ -125,11 +127,11 @@ export async function answerOnce(
   question: string,
   options: { preset: PresetId; source?: "app" | "cli" | "eval" },
 ): Promise<AnswerResult> {
-  const result: AnswerResult = { answer: "", outcome: null, citations: [], invalidCitations: [], refused: false, disagreements: [], latencyMs: 0, firstTokenMs: null, error: null };
+  const result: AnswerResult = { answer: "", outcome: null, citations: [], invalidCitations: [], refused: false, disagreements: [], latencyMs: 0, firstTokenMs: null, error: null, errorCode: null };
   for await (const event of answerStream(deps, runs, question, options)) {
     if (event.type === "sources") result.outcome = event.outcome ?? null;
     else if (event.type === "token") result.answer += event.text;
-    else if (event.type === "error") result.error = event.message;
+    else if (event.type === "error") Object.assign(result, { error: event.message, errorCode: event.code ?? null });
     else if (event.type === "done") {
       Object.assign(result, {
         citations: event.citations, invalidCitations: event.invalidCitations, refused: event.refused,

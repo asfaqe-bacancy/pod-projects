@@ -8,9 +8,9 @@ import { CitationBadge } from "@pod/ui/rag/citation-badge";
 import { QuestionForm } from "@pod/ui/rag/question-form";
 import { SampleQuestions } from "@pod/ui/rag/sample-questions";
 import { SelectField } from "@pod/ui/rag/select";
-import { ErrorNote, InfoNote, SkeletonLines } from "@pod/ui/rag/states";
+import { FailureNote, InfoNote, SkeletonLines } from "@pod/ui/rag/states";
 import { formatMs } from "@pod/ui/rag/trace-panel";
-import { useNdjsonStream } from "@pod/ui/rag/use-ndjson-stream";
+import { RequestError, useNdjsonStream } from "@pod/ui/rag/use-ndjson-stream";
 import type { AnswerSource, AskEvent } from "@/lib/types";
 import { SourcesPanel } from "./sources-panel";
 
@@ -38,6 +38,7 @@ export function AskScreen({ samples, enabled }: { samples: string[]; enabled: bo
   const [answer, setAnswer] = useState("");
   const [done, setDone] = useState<Done | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<string | null>(null);
   const [highlight, setHighlight] = useState<number | null>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
   const { run, cancel, running } = useNdjsonStream<AskEvent>();
@@ -50,6 +51,7 @@ export function AskScreen({ samples, enabled }: { samples: string[]; enabled: bo
       setAnswer("");
       setDone(null);
       setError(null);
+      setErrorCode(null);
       setHighlight(null);
       requestAnimationFrame(() => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
 
@@ -58,10 +60,14 @@ export function AskScreen({ samples, enabled }: { samples: string[]; enabled: bo
           if (event.type === "sources") setSources(event.sources);
           else if (event.type === "token") setAnswer((current) => current + event.text);
           else if (event.type === "done") setDone(event);
-          else if (event.type === "error") setError(event.message);
+          else if (event.type === "error") {
+            setError(event.message);
+            setErrorCode(event.code ?? null);
+          }
         });
       } catch (cause) {
         setError(cause instanceof Error ? cause.message : "Something went wrong.");
+        setErrorCode(cause instanceof RequestError ? cause.code : null);
       }
     },
     [run, topK, mode],
@@ -119,8 +125,9 @@ export function AskScreen({ samples, enabled }: { samples: string[]; enabled: bo
 
               <div className="mt-5">
                 {error ? (
-                  <ErrorNote
+                  <FailureNote
                     message={error}
+                    code={errorCode}
                     action={
                       <Button variant="secondary" size="sm" onClick={() => ask(asked)}>
                         <RotateCcw aria-hidden />

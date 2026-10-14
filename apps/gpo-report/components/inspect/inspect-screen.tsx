@@ -4,7 +4,8 @@ import { useState, type FormEvent } from "react";
 import { Search } from "lucide-react";
 import { Button } from "@pod/ui/rag/button";
 import { SelectField } from "@pod/ui/rag/select";
-import { ErrorNote, SkeletonLines } from "@pod/ui/rag/states";
+import { FailureNote, SkeletonLines } from "@pod/ui/rag/states";
+import { RequestError } from "@pod/ui/rag/use-ndjson-stream";
 import type { RetrievalResult } from "@/lib/types";
 import { ChunkBrowser } from "./chunk-browser";
 import { RetrievalTable } from "./retrieval-table";
@@ -18,12 +19,14 @@ export function InspectScreen({ firstPage, lastPage }: { firstPage: number; last
   const [result, setResult] = useState<RetrievalResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<string | null>(null);
 
   async function search(event: FormEvent) {
     event.preventDefault();
     if (query.trim().length < 3) return;
     setLoading(true);
     setError(null);
+    setErrorCode(null);
     try {
       const response = await fetch("/api/retrieve", {
         method: "POST",
@@ -31,10 +34,11 @@ export function InspectScreen({ firstPage, lastPage }: { firstPage: number; last
         body: JSON.stringify({ question: query.trim(), topK: Number(topK), mode }),
       });
       const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error ?? "Retrieval failed.");
+      if (!response.ok) throw new RequestError(payload.error ?? "Retrieval failed.", payload.code ?? null);
       setResult(payload);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Retrieval failed.");
+      setErrorCode(cause instanceof RequestError ? cause.code : null);
     } finally {
       setLoading(false);
     }
@@ -72,7 +76,7 @@ export function InspectScreen({ firstPage, lastPage }: { firstPage: number; last
 
         <div className="mt-5">
           {error ? (
-            <ErrorNote message={error} />
+            <FailureNote message={error} code={errorCode} />
           ) : loading ? (
             <div className="surface p-5">
               <SkeletonLines lines={5} />

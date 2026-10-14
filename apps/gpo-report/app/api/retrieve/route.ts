@@ -1,4 +1,5 @@
-import { askBodySchema, jsonError, rateLimit, readJson } from "@/lib/http";
+import { GeminiError } from "@pod/ai";
+import { askBodySchema, jsonError, modelErrorResponse, rateLimit, readJson } from "@/lib/http";
 import { retrieve } from "@/lib/retrieval/retrieve";
 import { getAppStatus, getServices } from "@/lib/server";
 
@@ -23,6 +24,8 @@ export async function POST(request: Request) {
       searchMs: Math.round(result.searchMs),
     });
   } catch (error) {
+    // Quota, rate limit, bad key: say so — the visitor can act on these.
+    if (error instanceof GeminiError && error.kind !== "error") return modelErrorResponse(error);
     console.error("[gpo] retrieve failed:", error);
     return jsonError("Retrieval failed. Try again in a moment.", 502);
   }

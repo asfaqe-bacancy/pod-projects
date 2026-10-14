@@ -8,9 +8,9 @@ import { CitationBadge } from "@pod/ui/rag/citation-badge";
 import { QuestionForm } from "@pod/ui/rag/question-form";
 import { SampleQuestions } from "@pod/ui/rag/sample-questions";
 import { SelectField } from "@pod/ui/rag/select";
-import { ErrorNote, InfoNote, SkeletonLines } from "@pod/ui/rag/states";
+import { FailureNote, InfoNote, SkeletonLines } from "@pod/ui/rag/states";
 import { TracePanel, formatMs } from "@pod/ui/rag/trace-panel";
-import { useNdjsonStream } from "@pod/ui/rag/use-ndjson-stream";
+import { RequestError, useNdjsonStream } from "@pod/ui/rag/use-ndjson-stream";
 import type { PresetId } from "@/lib/config";
 import type { AskEvent, ContextSource, QueryAnalysis, TraceStage } from "@/lib/types";
 import { PATH_SEPARATOR } from "@/lib/types";
@@ -45,6 +45,7 @@ export function AskScreen({
   const [answer, setAnswer] = useState("");
   const [done, setDone] = useState<Done | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<string | null>(null);
   const [highlight, setHighlight] = useState<number | null>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
   const { run, cancel, running } = useNdjsonStream<AskEvent>();
@@ -59,6 +60,7 @@ export function AskScreen({
       setAnswer("");
       setDone(null);
       setError(null);
+      setErrorCode(null);
       setHighlight(null);
       requestAnimationFrame(() => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
       try {
@@ -68,10 +70,14 @@ export function AskScreen({
           else if (event.type === "trace") setTrace(event.trace);
           else if (event.type === "token") setAnswer((current) => current + event.text);
           else if (event.type === "done") setDone(event);
-          else if (event.type === "error") setError(event.message);
+          else if (event.type === "error") {
+            setError(event.message);
+            setErrorCode(event.code ?? null);
+          }
         });
       } catch (cause) {
         setError(cause instanceof Error ? cause.message : "Something went wrong.");
+        setErrorCode(cause instanceof RequestError ? cause.code : null);
       }
     },
     [run, preset],
@@ -128,8 +134,9 @@ export function AskScreen({
                 <h2 className="mt-2 text-[1.0625rem] leading-snug font-medium">{asked.question}</h2>
                 <div className="mt-5">
                   {error ? (
-                    <ErrorNote
+                    <FailureNote
                       message={error}
+                      code={errorCode}
                       action={
                         <Button variant="secondary" size="sm" onClick={() => ask(asked.question)}>
                           <RotateCcw aria-hidden />

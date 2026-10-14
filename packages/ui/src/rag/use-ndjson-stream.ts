@@ -2,6 +2,17 @@
 
 import { useCallback, useRef, useState } from "react";
 
+/** A non-2xx reply, keeping the server's `code` (e.g. "quota") for the UI. */
+export class RequestError extends Error {
+  constructor(
+    message: string,
+    readonly code: string | null,
+  ) {
+    super(message);
+    this.name = "RequestError";
+  }
+}
+
 /**
  * Posts JSON and consumes the NDJSON reply event by event. Owns the
  * AbortController so a new question cancels the previous one, and Stop works.
@@ -32,8 +43,8 @@ export function useNdjsonStream<E>() {
         });
 
         if (!response.ok || !response.body) {
-          const payload = (await response.json().catch(() => null)) as { error?: string } | null;
-          throw new Error(payload?.error ?? `The server answered ${response.status}.`);
+          const payload = (await response.json().catch(() => null)) as { error?: string; code?: string } | null;
+          throw new RequestError(payload?.error ?? `The server answered ${response.status}.`, payload?.code ?? null);
         }
 
         const reader = response.body.getReader();

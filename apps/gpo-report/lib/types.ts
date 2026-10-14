@@ -92,7 +92,7 @@ export type AskEvent =
       refused: boolean;
       queryId: string | null;
     }
-  | { type: "error"; message: string; retryable: boolean };
+  | { type: "error"; message: string; retryable: boolean; code?: string };
 
 /** "p. 12" or "p. 12–13", using printed labels when the PDF has them. */
 export function pageLabel(start: string | number | null, end: string | number | null): string {

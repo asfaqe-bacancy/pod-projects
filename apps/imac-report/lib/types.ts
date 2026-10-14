@@ -240,6 +240,6 @@ export type AskEvent =
       images: number;
       queryId: string | null;
     }
-  | { type: "error"; message: string; retryable: boolean };
+  | { type: "error"; message: string; retryable: boolean; code?: string };
 
 export type { PresetId, Representation, StrategyId };

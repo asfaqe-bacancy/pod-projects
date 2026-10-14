@@ -45,6 +45,19 @@ describe("mapWithConcurrency", () => {
     expect(result).toEqual([2, 4, 6, 8, 10]);
     expect(peak).toBe(2);
   });
+
+  it("starts nothing new after a failure", async () => {
+    const started: number[] = [];
+    await expect(
+      mapWithConcurrency([1, 2, 3, 4, 5, 6], 2, async (n) => {
+        started.push(n);
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        if (n === 1) throw new Error("quota");
+        return n;
+      }),
+    ).rejects.toThrow("quota");
+    expect(started).toEqual([1, 2]);
+  });
 });
 
 describe("ndjson", () => {
