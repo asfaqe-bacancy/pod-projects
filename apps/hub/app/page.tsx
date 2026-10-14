@@ -11,7 +11,7 @@ export default function HubPage() {
 
       <main className="mx-auto w-full max-w-5xl flex-1 px-5 pb-20 sm:px-7">
         <section className="animate-rise pt-14 pb-12 sm:pt-24 sm:pb-16">
-          <p className="eyebrow">Welcome to my POD</p>
+          <p className="eyebrow">Welcome to Asfaqe Hussain&apos;s POD</p>
           <h1 className="mt-5 max-w-[20ch] text-[2.5rem] leading-[1.04] font-medium tracking-[-0.03em] sm:text-[3.75rem]">
             Four RAG projects.
             <span className="text-muted-foreground block">
@@ -20,8 +20,8 @@ export default function HubPage() {
           </h1>
           <p className="text-muted-foreground mt-7 max-w-[54ch] text-[1.0625rem] leading-relaxed sm:text-[1.125rem]">
             From your own study notes, to a baseline pipeline, to a 200-page
-            economic report, to answers hidden in tables, charts and
-            footnotes. Pick a project to open it.
+            economic report, to answers hidden in tables, charts and footnotes.
+            Pick a project to open it.
           </p>
           <p className="text-muted-foreground mt-6 text-sm">
             <span className="text-foreground font-medium">{live}</span> live
