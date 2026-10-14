@@ -9,6 +9,7 @@
  */
 
 export interface CleanStats {
+  letterSpacedRunsRemoved: number;
   repeatedLinesRemoved: number;
   pageNumberLinesRemoved: number;
   emptyPages: number;
@@ -20,6 +21,25 @@ export function normaliseUnicode(text: string): string {
     .normalize("NFKC")
     .replace(/[​-‍﻿­]/g, "")
     .replace(/\r\n?/g, "\n");
+}
+
+/**
+ * Letter-spaced display text — running headers like
+ * "2 0 1 8 A N N U A L R E P O R T | U . S . G O V E R N M E N T" — often
+ * comes out glued to the body ("…O F F I C EThe United States…"), so the
+ * line-based header pass can't see it. Eight or more single characters in a
+ * row, each followed by one space, is never prose; the run becomes a line
+ * break, which also frees the sentence glued to it.
+ */
+const LETTER_SPACED_RUN = /(?<!\p{L})(?:[\p{Lu}\d.&|] ){7,}[\p{Lu}\d.&|]/gu;
+
+export function removeLetterSpacedRuns(text: string): { text: string; removed: number } {
+  let removed = 0;
+  const cleaned = text.replace(LETTER_SPACED_RUN, () => {
+    removed += 1;
+    return "\n";
+  });
+  return { text: cleaned, removed };
 }
 
 const EDGE_LINES = 3;
@@ -129,7 +149,12 @@ export function collapseWhitespace(text: string): string {
 
 /** The full cleaning pass over a document's pages, in order. */
 export function cleanPages(rawPages: string[]): { pages: string[]; stats: CleanStats } {
-  const normalised = rawPages.map(normaliseUnicode);
+  let letterSpacedRunsRemoved = 0;
+  const normalised = rawPages.map((page) => {
+    const { text, removed } = removeLetterSpacedRuns(normaliseUnicode(page));
+    letterSpacedRunsRemoved += removed;
+    return text;
+  });
   const { pages: withoutRepeats, removed: repeatedLinesRemoved } =
     removeRepeatedEdgeLines(normalised);
 
@@ -143,6 +168,7 @@ export function cleanPages(rawPages: string[]): { pages: string[]; stats: CleanS
   return {
     pages,
     stats: {
+      letterSpacedRunsRemoved,
       repeatedLinesRemoved,
       pageNumberLinesRemoved,
       emptyPages: pages.filter((page) => page.length === 0).length,

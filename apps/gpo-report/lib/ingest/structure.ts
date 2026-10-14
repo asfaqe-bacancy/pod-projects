@@ -10,7 +10,11 @@ import type { Paragraph } from "../types";
  *
  * 1. If the PDF has an outline (bookmarks), it is authoritative: an entry
  *    takes effect on its start page — at the line that matches its title if
- *    one is found, otherwise from the top of the page.
+ *    one is found, otherwise from the top of the page. Where the bookmarks
+ *    don't reach (the GPO report only bookmarks its financial statements), a
+ *    hand-written supplement (`data/outline-supplement.json`) adds entries.
+ *    An outline level named after a file ("… FINAL Unprotected.pdf", left
+ *    behind when PDFs are merged) is skipped; its children move up.
  * 2. Otherwise, headings are guessed: a short line with no closing period, in
  *    Title Case or ALL CAPS, followed by a longer line.
  */
@@ -20,11 +24,19 @@ interface PageInput {
   text: string;
 }
 
+/** A hand-written outline entry for pages the PDF's bookmarks don't cover. */
+export interface SupplementEntry {
+  title: string;
+  page: number;
+  /** "top": starts at the top of the page, for headings the text layer puts out of order. */
+  at?: "top";
+}
+
 interface Boundary {
   path: string[];
   pageNumber: number;
-  /** Normalised title to look for on the start page. */
-  match: string;
+  /** Normalised title to look for on the start page; null = from the top of the page. */
+  match: string | null;
 }
 
 export function normaliseTitle(text: string): string {
@@ -34,15 +46,22 @@ export function normaliseTitle(text: string): string {
     .trim();
 }
 
+/** A PDF-merge artefact: an outline level named after a source file. */
+const FILE_TITLE = /\.(pdf|docx?|pptx?|indd)$/i;
+
 /** Outline → ordered list of (path, start page). Entries without a page are skipped. */
-export function outlineBoundaries(outline: OutlineEntry[]): Boundary[] {
+export function outlineBoundaries(outline: OutlineEntry[], fromTop: ReadonlySet<OutlineEntry> = new Set()): Boundary[] {
   const boundaries: Boundary[] = [];
 
   function walk(entries: OutlineEntry[], parents: string[]) {
     for (const entry of entries) {
+      if (FILE_TITLE.test(entry.title.trim())) {
+        walk(entry.children, parents);
+        continue;
+      }
       const path = [...parents, entry.title];
       if (entry.pageNumber !== null && entry.title) {
-        boundaries.push({ path, pageNumber: entry.pageNumber, match: normaliseTitle(entry.title) });
+        boundaries.push({ path, pageNumber: entry.pageNumber, match: fromTop.has(entry) ? null : normaliseTitle(entry.title) });
       }
       walk(entry.children, path);
     }
@@ -71,7 +90,8 @@ export function looksLikeHeading(line: string, next: string | undefined): boolea
 
   const allCaps = text === text.toUpperCase() && /\p{Lu}/u.test(text);
   const minor = /^(a|an|the|and|or|of|in|on|for|to|at|by|with|from|vs\.?)$/i;
-  const titleCase = words.every((word, i) => /^[\p{Lu}\d]/u.test(word) || (i > 0 && minor.test(word)));
+  // "(ADS)" counts as capitalised: leading brackets and quotes are skipped.
+  const titleCase = words.every((word, i) => /^[("'“‘]?[\p{Lu}\d]/u.test(word) || (i > 0 && minor.test(word)));
 
   if (!allCaps && !titleCase) return false;
   // A heading introduces something longer; two short title lines in a row are
@@ -110,12 +130,18 @@ function pageParagraphs(text: string): { text: string; heading: boolean }[] {
   return result;
 }
 
-export function assignSections(pages: PageInput[], outline: OutlineEntry[]): {
+export function assignSections(
+  pages: PageInput[],
+  outline: OutlineEntry[],
+  supplement: SupplementEntry[] = [],
+): {
   paragraphs: Paragraph[];
   source: "outline" | "heuristic";
   sections: string[];
 } {
-  const boundaries = outlineBoundaries(outline);
+  const supplemented: OutlineEntry[] = supplement.map(({ title, page }) => ({ title, pageNumber: page, level: 0, children: [] }));
+  const fromTop = new Set(supplemented.filter((_, i) => supplement[i].at === "top"));
+  const boundaries = outlineBoundaries([...supplemented, ...outline], fromTop);
   const source = boundaries.length > 0 ? "outline" : "heuristic";
   const paragraphs: Paragraph[] = [];
   let current: string[] = [];
@@ -135,7 +161,7 @@ export function assignSections(pages: PageInput[], outline: OutlineEntry[]): {
     const pending = [...starting];
     if (source === "outline" && pending.length) {
       const found = (boundary: Boundary) =>
-        blocks.some((block) => normaliseTitle(block.text).startsWith(boundary.match));
+        boundary.match !== null && blocks.some((block) => normaliseTitle(block.text).startsWith(boundary.match!));
       while (pending.length && !found(pending[0])) {
         current = pending.shift()!.path;
       }
@@ -144,7 +170,7 @@ export function assignSections(pages: PageInput[], outline: OutlineEntry[]): {
     for (const block of blocks) {
       if (source === "outline") {
         const key = normaliseTitle(block.text);
-        const hit = pending.findIndex((boundary) => key.startsWith(boundary.match));
+        const hit = pending.findIndex((boundary) => boundary.match !== null && key.startsWith(boundary.match));
         if (hit !== -1) {
           // Earlier entries on the page that we skipped past are superseded.
           current = pending[hit].path;

@@ -13,6 +13,7 @@ import {
   upsertDocument,
 } from "../db/runs";
 import { prepareDocument } from "./prepare";
+import type { SupplementEntry } from "./structure";
 
 /**
  * The offline half of RAG: PDF → chunks → vectors → a new ingestion run.
@@ -26,6 +27,7 @@ export async function ingest(
   {
     data,
     chunkConfig = RAG_CONFIG.chunk,
+    supplement = [],
     activate = false,
     force = false,
     notes,
@@ -33,17 +35,20 @@ export async function ingest(
   }: {
     data: Uint8Array;
     chunkConfig?: ChunkConfig;
+    supplement?: SupplementEntry[];
     activate?: boolean;
     force?: boolean;
     notes?: string;
     log?: (line: string) => void;
   },
 ) {
-  const prepared = await prepareDocument(data, chunkConfig);
+  const prepared = await prepareDocument(data, chunkConfig, supplement);
   log(`Parsed ${prepared.pageCount} pages → ${prepared.chunks.length} chunks (${prepared.structureSource} sections).`);
 
   const config = {
     ...ingestionConfig(chunkConfig),
+    // Part of the run's identity: a changed outline is a different run.
+    outlineSupplement: supplement,
     embedding: { ...RAG_CONFIG.embedding, model: embedder.model, dims: embedder.dimensions },
   };
   const hash = configHash(config);

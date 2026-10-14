@@ -15,6 +15,36 @@ describe("looksLikeHeading", () => {
 });
 
 describe("assignSections", () => {
+  it("skips an outline level named after a merged file", () => {
+    const pages = [{ pageNumber: 1, text: "Funding\nGPO is funded by appropriations and revenue from customers." }];
+    const outline = [
+      { title: "FY 2018 Statements FINAL.pdf", pageNumber: 1, level: 0, children: [{ title: "Funding", pageNumber: 1, level: 1, children: [] }] },
+    ];
+    expect(assignSections(pages, outline).paragraphs[0].sectionPath).toEqual(["Funding"]);
+  });
+
+  it("adds supplement entries where the outline doesn't reach", () => {
+    const pages = [
+      { pageNumber: 1, text: "Body that comes before its heading in the text layer.\nA Message from the Director" },
+      { pageNumber: 2, text: "Previous section continues here and ends.\nGPO and Congress\nGPO prints the Congressional Record every day." },
+      { pageNumber: 3, text: "Notes\nThe statements are audited by an independent firm." },
+    ];
+    const outline = [{ title: "Notes", pageNumber: 3, level: 1, children: [] }];
+    const supplement = [
+      { title: "A Message from the Director", page: 1, at: "top" as const },
+      { title: "GPO and Congress", page: 2 },
+    ];
+    const { paragraphs } = assignSections(pages, outline, supplement);
+    expect(paragraphs.map((p) => [p.pageNumber, p.sectionPath.join("/"), p.text.slice(0, 8)])).toEqual([
+      [1, "A Message from the Director", "Body tha"],
+      // A top-of-page entry doesn't hunt for its heading, so the stray line stays as text.
+      [1, "A Message from the Director", "A Messag"],
+      [2, "A Message from the Director", "Previous"],
+      [2, "GPO and Congress", "GPO prin"],
+      [3, "Notes", "The stat"],
+    ]);
+  });
+
   it("uses the outline when present, switching at the matching heading", () => {
     const pages = [
       { pageNumber: 1, text: "Message from the Director\nWe had a strong year overall and printed a lot." },

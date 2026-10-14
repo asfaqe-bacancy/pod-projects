@@ -8,6 +8,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { parseArgs } from "node:util";
 import { DOCUMENT } from "../lib/config";
 import { prepareDocument } from "../lib/ingest/prepare";
+import { loadOutlineSupplement } from "../lib/ingest/supplement";
 import { chunkOptions } from "./options";
 
 const { values, positionals } = parseArgs({
@@ -21,7 +22,7 @@ const { values, positionals } = parseArgs({
 
 const file = positionals[0] ?? DOCUMENT.path;
 const data = new Uint8Array(await readFile(file));
-const prepared = await prepareDocument(data, chunkOptions(values));
+const prepared = await prepareDocument(data, chunkOptions(values), await loadOutlineSupplement());
 
 await mkdir("data/parsed", { recursive: true });
 await writeFile(

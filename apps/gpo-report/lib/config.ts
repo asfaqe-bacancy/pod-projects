@@ -10,6 +10,8 @@ export const DOCUMENT = {
   filename: "gpo-annual-report.pdf",
   /** Relative to the app root. */
   path: "data/gpo-annual-report.pdf",
+  /** Hand-written outline for pages the PDF's bookmarks miss (see lib/ingest/structure.ts). */
+  outlineSupplementPath: "data/outline-supplement.json",
 };
 
 export const SCHEMA = "gpo";

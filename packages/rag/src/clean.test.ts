@@ -5,6 +5,7 @@ import {
   dehyphenate,
   joinWrappedLines,
   normaliseUnicode,
+  removeLetterSpacedRuns,
   removePageNumberLines,
   removeRepeatedEdgeLines,
 } from "./clean";
@@ -32,6 +33,26 @@ describe("removeRepeatedEdgeLines", () => {
 
   it("leaves short documents alone", () => {
     expect(removeRepeatedEdgeLines(["a\nb", "a\nc"]).removed).toBe(0);
+  });
+});
+
+describe("removeLetterSpacedRuns", () => {
+  it("cuts a spaced running header out of the sentence it was glued to", () => {
+    const { text, removed } = removeLetterSpacedRuns(
+      "2 0 1 8 A N N U A L R E P O R T | U . S . G O V E R N M E N T P U B L I S H I N G O F F I C EThe United States Government",
+    );
+    expect(text.trim()).toBe("The United States Government");
+    expect(removed).toBe(1);
+  });
+
+  it("splits two headers joined by a page number", () => {
+    const { text } = removeLetterSpacedRuns("O F F I C E | 2 0 1 8 A N N U A L3U . S . G O V E R N M E N T\nmillion title retrievals");
+    expect(text.split("\n").map((l) => l.trim()).filter(Boolean)).toEqual(["3", "million title retrievals"]);
+  });
+
+  it("leaves prose, acronyms and short spaced text alone", () => {
+    const prose = "GPO staff visited 166 depository libraries in 25 states (U.S. A B C).";
+    expect(removeLetterSpacedRuns(prose).text).toBe(prose);
   });
 });
 

@@ -7,6 +7,7 @@ import { readFile } from "node:fs/promises";
 import { parseArgs } from "node:util";
 import { DOCUMENT } from "../lib/config";
 import { ingest } from "../lib/ingest/pipeline";
+import { loadOutlineSupplement } from "../lib/ingest/supplement";
 import { createServicesFromEnv } from "../lib/services";
 import { chunkOptions } from "./options";
 
@@ -27,7 +28,7 @@ try {
   const data = new Uint8Array(await readFile(positionals[0] ?? DOCUMENT.path));
   const result = await ingest(
     { sql, embedder },
-    { data, chunkConfig: chunkOptions(values), activate: values.activate, force: values.force, notes: values.notes },
+    { data, chunkConfig: chunkOptions(values), supplement: await loadOutlineSupplement(), activate: values.activate, force: values.force, notes: values.notes },
   );
   if (!values.activate && !result.skipped) {
     console.log(`\nActivate it with: pnpm activate ${result.runId.slice(0, 8)}`);
