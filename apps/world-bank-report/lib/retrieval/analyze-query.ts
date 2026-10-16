@@ -59,7 +59,7 @@ export function fallbackAnalysis(question: string, chapters: string[] = []): Que
 export async function analyzeQuery(
   gemini: Gemini,
   question: string,
-  { chapters, onUsage }: { chapters: string[]; onUsage?: (tokens: number) => void },
+  { chapters, onUsage, signal }: { chapters: string[]; onUsage?: (tokens: number) => void; signal?: AbortSignal },
 ): Promise<QueryAnalysis> {
   try {
     const raw = await gemini.generateJson({
@@ -67,6 +67,7 @@ export async function analyzeQuery(
       schema: responseSchema,
       temperature: 0,
       maxOutputTokens: 512,
+      signal,
       validate: (value) => schema.parse(value),
       onUsage: (usage) => onUsage?.(usage.input + usage.output),
     });

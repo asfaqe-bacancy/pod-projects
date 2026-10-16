@@ -5,7 +5,7 @@ import { sectionChildren } from "../db/chunks";
 import { chapterTitles, sectionInfo } from "../db/sections";
 import type { Candidate, IngestionRun, QueryAnalysis, QueryFilters, RetrievalOutcome, TraceStage } from "../types";
 import { PATH_SEPARATOR } from "../types";
-import { analyzeQuery } from "./analyze-query";
+import { analyzeQuery, fallbackAnalysis } from "./analyze-query";
 import { assembleContext, type RankedCandidate } from "./context";
 import { fuseLists, selectWithQuotas, type Pooled } from "./fusion";
 import { rerank } from "./rerank";
@@ -28,6 +28,33 @@ export interface RetrievalDeps {
   gemini: Gemini;
 }
 
+/** Time limits for the optional model stages; unset means wait as long as it takes. */
+export interface StageBudget {
+  analyzeMs?: number;
+  rerankMs?: number;
+}
+
+/**
+ * Runs `task` with an abort signal. Past `ms` the signal fires and `fallback`
+ * is returned at once, without waiting for any retries inside to unwind.
+ */
+async function withinBudget<T>(ms: number | undefined, task: (signal?: AbortSignal) => Promise<T>, fallback: () => T): Promise<T> {
+  if (!ms) return task();
+  const controller = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const late = new Promise<T>((resolve) => {
+    timer = setTimeout(() => {
+      controller.abort();
+      resolve(fallback());
+    }, ms);
+  });
+  try {
+    return await Promise.race([task(controller.signal), late]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 const elapsed = (start: number) => Math.round(performance.now() - start);
 
 export async function runRetrieval(
@@ -35,6 +62,7 @@ export async function runRetrieval(
   runs: Partial<Record<RunKind, IngestionRun>>,
   question: string,
   presetId: PresetId,
+  budget: StageBudget = {},
 ): Promise<RetrievalOutcome> {
   const preset = PRESETS[presetId];
   const run = runs[preset.run];
@@ -51,7 +79,13 @@ export async function runRetrieval(
   let start = performance.now();
   const chapters = preset.analyze ? await chapterTitles(deps.sql, run.id) : [];
   const [analysis, rawEmbedding] = await Promise.all([
-    preset.analyze ? analyzeQuery(deps.gemini, question, { chapters, onUsage: (t) => (tokens.analysis += t) }) : Promise.resolve(null),
+    preset.analyze
+      ? withinBudget(
+          budget.analyzeMs,
+          (signal) => analyzeQuery(deps.gemini, question, { chapters, signal, onUsage: (t) => (tokens.analysis += t) }),
+          () => fallbackAnalysis(question, chapters),
+        )
+      : Promise.resolve(null),
     deps.embedder.embedQuery(question),
   ]);
   if (analysis) {
@@ -122,10 +156,14 @@ export async function runRetrieval(
   let ranked: RankedCandidate[];
   const candidatePool = pool.slice(0, CONFIG.retrieval.candidatePool);
   if (preset.rerank) {
-    const { scores, failed } = await rerank(deps.gemini, analysis?.rewrittenQuery ?? question, candidatePool, (t) => (tokens.rerank += t));
+    const { scores, failed, timedOut } = await withinBudget<{ scores: Map<string, number>; failed: boolean; timedOut?: boolean }>(
+      budget.rerankMs,
+      (signal) => rerank(deps.gemini, analysis?.rewrittenQuery ?? question, candidatePool, (t) => (tokens.rerank += t), signal),
+      () => ({ scores: new Map(), failed: true, timedOut: true }),
+    );
     if (failed) {
       ranked = selectWithQuotas(candidatePool, k, queries.length).map((c) => ({ ...c, finalScore: c.fused }));
-      trace.push({ stage: "rerank", ms: elapsed(start), summary: "failed — kept fused order" });
+      trace.push({ stage: "rerank", ms: elapsed(start), summary: `${timedOut ? "over its time budget" : "failed"} — kept fused order` });
     } else {
       const scored = candidatePool
         .map((c) => ({ ...c, rerankScore: scores.get(c.chunkId) ?? 0, finalScore: (scores.get(c.chunkId) ?? 0) / 10 + c.fused }))

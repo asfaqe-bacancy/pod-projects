@@ -78,6 +78,13 @@ export const CONFIG = {
     contextTokenBudget: 12000,
     rerankMinScore: 3,
     rerankPreviewChars: 600,
+    /**
+     * Web requests only — Vercel stops a function at 60s, and free-tier retries
+     * can eat that. Past `analyzeMs` the question is used as asked; past
+     * `rerankMs` the fused order is kept; past `totalMs` the answer stops with
+     * a clear error. The CLI and eval wait as long as they need.
+     */
+    appBudget: { analyzeMs: 8_000, rerankMs: 12_000, totalMs: 55_000 },
   },
   generation: { model: GENERATION_MODEL, temperature: 0.2, maxOutputTokens: 1536 },
 };

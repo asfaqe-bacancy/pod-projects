@@ -24,8 +24,13 @@ export async function* answerStream(
   let error: string | null = null;
   const generation = { input: 0, output: 0 };
 
+  // The web app has Vercel's 60s ceiling; the CLI and eval don't.
+  const budget = source === "app" ? CONFIG.retrieval.appBudget : null;
+  const overall = budget ? AbortSignal.timeout(budget.totalMs) : null;
+  const generationSignal = overall && signal ? AbortSignal.any([signal, overall]) : (overall ?? signal);
+
   try {
-    outcome = await runRetrieval(deps, runs, question, preset);
+    outcome = await runRetrieval(deps, runs, question, preset, budget ?? {});
     if (outcome.analysis) yield { type: "analysis", analysis: outcome.analysis };
     yield { type: "sources", preset, sources: outcome.sources, outcome };
 
@@ -39,7 +44,7 @@ export async function* answerStream(
         prompt: answerUserPrompt(outcome.context, question, outcome.analysis?.intent),
         temperature: CONFIG.generation.temperature,
         maxOutputTokens: CONFIG.generation.maxOutputTokens,
-        signal,
+        signal: generationSignal,
         onUsage: (usage) => Object.assign(generation, usage),
       })) {
         firstTokenMs ??= performance.now() - started;
@@ -58,9 +63,13 @@ export async function* answerStream(
     error = cause instanceof Error ? cause.message : String(cause);
     yield {
       type: "error",
-      message: cause instanceof Error && cause.name === "NotIngestedError" ? cause.message : failure.message,
-      retryable: failure.retryable,
-      code: failure.kind,
+      message: overall?.aborted
+        ? "The model is slow right now and the answer ran out of time. Trying again usually works."
+        : cause instanceof Error && cause.name === "NotIngestedError"
+          ? cause.message
+          : failure.message,
+      retryable: overall?.aborted ? true : failure.retryable,
+      code: overall?.aborted ? "busy" : failure.kind,
     };
   }
 

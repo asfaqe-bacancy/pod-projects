@@ -30,6 +30,7 @@ export async function rerank(
   query: string,
   candidates: Candidate[],
   onUsage?: (tokens: number) => void,
+  signal?: AbortSignal,
 ): Promise<{ scores: Map<string, number>; failed: boolean }> {
   if (candidates.length === 0) return { scores: new Map(), failed: false };
   const passages = candidates
@@ -48,6 +49,7 @@ export async function rerank(
       },
       temperature: 0,
       maxOutputTokens: 2048,
+      signal,
       validate: (value) => schema.parse(value),
       onUsage: (usage) => onUsage?.(usage.input + usage.output),
     });
