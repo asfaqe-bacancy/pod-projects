@@ -3,6 +3,7 @@ import { parseArgs } from "node:util";
 import { DEFAULT_PRESET, PRESET_IDS, type PresetId } from "../lib/config";
 import { getActiveRuns } from "../lib/db/runs";
 import { answerStream } from "../lib/rag/answer";
+import { SCRIPT_RETRY } from "@pod/ai";
 import { createServicesFromEnv } from "../lib/services";
 import { PATH_SEPARATOR } from "../lib/types";
 
@@ -17,7 +18,7 @@ if (!question || !PRESET_IDS.includes(preset)) {
   process.exit(1);
 }
 
-const services = createServicesFromEnv();
+const services = createServicesFromEnv(SCRIPT_RETRY);
 try {
   const runs = await getActiveRuns(services.sql);
   for await (const event of answerStream(services, runs, question, { preset, source: "cli" })) {

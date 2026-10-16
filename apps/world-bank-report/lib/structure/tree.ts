@@ -17,12 +17,18 @@ import type { Block, SectionKind, SectionNode } from "../types";
  * 4. Regions in a section's title are inherited by everything below it, so a
  *    paragraph under "South Asia › Outlook" is about South Asia even when it
  *    never names it.
+ * 5. A hand-checked outline (data/outline.json) can replace the bookmarks and
+ *    set each entry's kind; a box entry closes after its last page. When the
+ *    markdown already has that box as a block, the entry is dropped.
  */
 
 export interface OutlineItem {
   title: string;
   pageNumber: number | null;
   level: number;
+  kind?: SectionKind;
+  /** Last page, for entries that end before the next one starts (boxes). */
+  pageEnd?: number;
 }
 
 export function normaliseTitle(text: string): string {
@@ -55,6 +61,8 @@ interface Builder extends SectionNode {
   /** Markdown heading level that opened this node (for non-outline headings). */
   headingLevel: number | null;
   fromOutline: boolean;
+  /** Closes once a later page starts. */
+  closesAfter?: number;
 }
 
 export function buildTree(blocks: Block[], outline: OutlineItem[], pageCount: number): SectionNode {
@@ -89,8 +97,10 @@ export function buildTree(blocks: Block[], outline: OutlineItem[], pageCount: nu
   const top = () => stack[stack.length - 1];
   let seenChapter = false;
 
+  const boxTitles = blocks.flatMap((block) => (block.kind === "box" ? [block.title] : []));
   const entries = outline
     .filter((entry) => entry.pageNumber !== null && entry.title.trim())
+    .filter((entry) => !(entry.kind === "box" && boxTitles.some((title) => titlesMatch(title, entry.title))))
     .map((entry) => ({ ...entry, opened: false }));
   const minLevel = entries.length ? Math.min(...entries.map((e) => e.level)) : 1;
 
@@ -98,9 +108,11 @@ export function buildTree(blocks: Block[], outline: OutlineItem[], pageCount: nu
     entry.opened = true;
     const depth = entry.level - minLevel + 1;
     while (stack.length > 1 && (!top().fromOutline || top().level >= depth)) stack.pop();
-    const kind = kindFor(entry.title, depth, !seenChapter);
+    const kind = entry.kind ?? kindFor(entry.title, depth, !seenChapter);
     if (kind === "chapter") seenChapter = true;
-    stack.push(node(entry.title, depth, top(), page, kind, null, true));
+    const created = node(entry.title, depth, top(), page, kind, null, true);
+    if (entry.pageEnd) created.closesAfter = entry.pageEnd;
+    stack.push(created);
   }
 
   function openHeading(text: string, headingLevel: number, page: number) {
@@ -127,6 +139,8 @@ export function buildTree(blocks: Block[], outline: OutlineItem[], pageCount: nu
   for (const block of blocks) {
     if (block.page !== currentPage) {
       currentPage = block.page;
+      const closing = stack.findIndex((open) => open.closesAfter !== undefined && open.closesAfter < currentPage);
+      if (closing > 0) stack.length = closing;
       // Outline entries for this page whose title never appears as a heading
       // open at the top of the page.
       for (const entry of entries) {

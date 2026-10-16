@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { joinPages, parsePageBlocks } from "@/lib/parse/blocks";
 import { pageFidelity } from "@/lib/parse/fidelity";
 import { splitPages } from "@/lib/parse/page-markdown";
-import { buildTree, flattenTree } from "@/lib/structure/tree";
+import { buildTree, flattenTree, type OutlineItem } from "@/lib/structure/tree";
 import { MARKDOWN_PAGES, fixtureReport } from "./fixtures";
 
 describe("parsePageBlocks", () => {
@@ -74,6 +74,42 @@ describe("buildTree", () => {
     expect(byTitle("Box 1.1 Trade policy uncertainty").kind).toBe("box");
     expect(byTitle("Chapter 1 Global Outlook").pageStart).toBe(2);
     expect(byTitle("Chapter 1 Global Outlook").pageEnd).toBe(4);
+  });
+});
+
+describe("buildTree with a hand-checked outline", () => {
+  // Text-layer style: one paragraph per page, no headings or box blocks.
+  const pages = ["Foreword text.", "Chapter 1 opens.", "Box 1.1 starts.", "Box 1.1 ends.", "Back in the chapter.", "South Asia grew."];
+  const blocks = joinPages(pages.map((text, i) => [{ kind: "paragraph" as const, text, page: i + 1 }]));
+  const outline: OutlineItem[] = [
+    { title: "Foreword", pageNumber: 1, level: 1, kind: "front_matter" },
+    { title: "Chapter 1. Global Outlook", pageNumber: 2, level: 1 },
+    { title: "Box 1.1 Trade policy uncertainty", pageNumber: 3, level: 2, kind: "box", pageEnd: 4 },
+    { title: "Chapter 2. Regional Outlooks", pageNumber: 6, level: 1 },
+    { title: "South Asia", pageNumber: 6, level: 2 },
+  ];
+  const nodes = flattenTree(buildTree(blocks, outline, pages.length));
+  const byTitle = (title: string) => nodes.find((n) => n.title === title)!;
+
+  it("uses the outline's kinds and closes a box after its last page", () => {
+    expect(byTitle("Foreword").kind).toBe("front_matter");
+    const box = byTitle("Box 1.1 Trade policy uncertainty");
+    expect(box).toMatchObject({ kind: "box", pageStart: 3, pageEnd: 4 });
+    expect(byTitle("Chapter 1. Global Outlook").blocks.map((b) => b.page)).toEqual([2, 5]);
+    expect(byTitle("South Asia")).toMatchObject({ path: ["Chapter 2. Regional Outlooks", "South Asia"], regions: ["SAR"] });
+  });
+
+  it("drops a box entry when the markdown already has the box", () => {
+    const parsed = fixtureReport();
+    const md = joinPages(parsed.markdownPages.map((page, i) => parsePageBlocks(page!, i + 1)));
+    const withBox: OutlineItem[] = [...parsed.outline, { title: "Box 1.1 Trade policy uncertainty", pageNumber: 4, level: 2, kind: "box", pageEnd: 4 }];
+    const boxes = flattenTree(buildTree(md, withBox, parsed.pageCount)).filter((n) => n.kind === "box");
+    expect(boxes).toHaveLength(1);
+  });
+
+  it("doesn't run a paragraph on into a page where a section starts", () => {
+    const split = joinPages([[{ kind: "paragraph", text: "no full stop", page: 1 }], [{ kind: "paragraph", text: "next", page: 2 }]], new Set([2]));
+    expect(split).toHaveLength(2);
   });
 });
 

@@ -14,6 +14,8 @@ export const questionSchema = z.object({
   category: z.enum(CATEGORIES),
   expected_answer: z.string().nullable(),
   must_include: z.array(z.string()).default([]),
+  /** Phrases that fail the answer if present — e.g. another region's name. */
+  must_not_include: z.array(z.string()).default([]),
   expected_pages: z.array(z.number().int().positive()).default([]),
   /** Path prefixes joined with " › ", e.g. "Regional Outlooks › South Asia". */
   expected_sections: z.array(z.string()).default([]),

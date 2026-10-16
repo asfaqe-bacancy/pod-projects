@@ -8,7 +8,7 @@ import {
   type SchemaUnion,
 } from "@google/genai";
 import { GeminiError, QUOTA_MESSAGE, describeGeminiError, withRetry, type RetryOptions } from "./errors";
-import { GENERATION_MODEL } from "./models";
+import { GENERATION_MODEL, NO_ZERO_THINKING_BUDGET } from "./models";
 
 /**
  * The Gemini text/vision client every POD app shares.
@@ -89,7 +89,13 @@ export function createGemini({
         return await call(model);
       } catch (cause) {
         const error = describeGeminiError(cause);
-        if (error.kind !== "quota" && error.kind !== "rate_limit" && error.kind !== "busy") throw error;
+        // The chosen model's other errors are the caller's to see. A fallback
+        // model failing for its own reasons (e.g. a 400 on a setting it doesn't
+        // support) shouldn't stop the chain — only a bad key, a safety block or
+        // a cancel should.
+        const modelTrouble = error.kind === "quota" || error.kind === "rate_limit" || error.kind === "busy";
+        const stops = error.kind === "auth" || error.kind === "blocked" || error.kind === "cancelled";
+        if (!modelTrouble && (i === 0 || stops)) throw error;
         if (error.kind === "quota") exhausted.add(model);
         lastError = error;
         const next = usable[i + 1];
@@ -109,13 +115,15 @@ export function createGemini({
 
   function config(
     request: PromptRequest,
+    model: string,
     extra?: GenerateContentConfig,
   ): GenerateContentConfig {
+    const budget = request.thinkingBudget ?? 0;
     return {
       systemInstruction: request.system,
       temperature: request.temperature ?? 0.4,
       maxOutputTokens: request.maxOutputTokens ?? 2048,
-      thinkingConfig: { thinkingBudget: request.thinkingBudget ?? 0 },
+      ...(budget === 0 && NO_ZERO_THINKING_BUDGET.has(model) ? {} : { thinkingConfig: { thinkingBudget: budget } }),
       abortSignal: request.signal,
       ...extra,
     };
@@ -137,7 +145,7 @@ export function createGemini({
       const response = await sdk.models.generateContent({
         model,
         contents: contents(request),
-        config: config(request),
+        config: config(request, model),
       });
       const text = response.text?.trim();
       if (!text) {
@@ -158,7 +166,7 @@ export function createGemini({
         const response = await sdk.models.generateContent({
           model,
           contents: contents(request),
-          config: config(request, {
+          config: config(request, model, {
             responseMimeType: "application/json",
             responseSchema: request.schema,
           }),
@@ -198,7 +206,7 @@ export function createGemini({
       sdk.models.generateContentStream({
         model,
         contents: contents(request),
-        config: config(request),
+        config: config(request, model),
       }),
     ));
 

@@ -100,6 +100,13 @@ export interface RetryOptions {
   maxWaitMs?: number;
 }
 
+/**
+ * For CLI scripts: free-tier keys allow ~5 requests a minute and 503s come in
+ * spikes. One patient retry per model, then the client moves on to the next
+ * of its `fallbackModels`.
+ */
+export const SCRIPT_RETRY: RetryOptions = { attempts: 2, baseDelayMs: 10_000, maxWaitMs: 90_000 };
+
 export async function withRetry<T>(
   operation: () => Promise<T>,
   { attempts = 3, baseDelayMs = 700, maxWaitMs = 15_000 }: RetryOptions = {},

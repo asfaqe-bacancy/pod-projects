@@ -49,13 +49,47 @@ export function validateFilters(
   if (types.length) filters.contentTypes = types;
 
   if (proposed.chapter) {
-    const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
-    const match = chapters.find((title) => norm(title) === norm(proposed.chapter!));
+    const match = matchChapter(proposed.chapter, chapters);
     if (match) filters.chapter = match;
     else dropped.push(`chapter:${proposed.chapter}`);
   }
 
   return { filters, dropped };
+}
+
+const NUMBER_WORDS: Record<string, number> = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9 };
+const CHAPTER_NUMBER = /\b(?:chapter|ch\.?)\s*(\d+|one|two|three|four|five|six|seven|eight|nine)\b/i;
+
+const norm = (text: string) => text.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+const withoutNumber = (text: string) => norm(text).replace(/^chapter \d+ /, "");
+
+function chapterNumbered(n: number, chapters: string[]): string | null {
+  return chapters.find((title) => new RegExp(`^chapter\\s+${n}\\b`, "i").test(title)) ?? null;
+}
+
+/**
+ * A chapter reference → the report's exact chapter title, or null.
+ * Accepts the exact title, the title without its number, "Chapter 3",
+ * "ch. 3", "chapter three" or a bare "3".
+ */
+export function matchChapter(reference: string, chapters: string[]): string | null {
+  const exact = chapters.find((title) => norm(title) === norm(reference) || withoutNumber(title) === withoutNumber(reference));
+  if (exact) return exact;
+  const numbered = CHAPTER_NUMBER.exec(reference)?.[1] ?? (/^\s*(\d+)\s*$/.exec(reference)?.[1] ?? null);
+  if (!numbered) return null;
+  return chapterNumbered(NUMBER_WORDS[numbered.toLowerCase()] ?? Number(numbered), chapters);
+}
+
+/**
+ * A chapter the question names outright — "Chapter 3", or a top-level title
+ * such as "the executive summary" — so it is filtered on even when query
+ * analysis misses it or falls back.
+ */
+export function chapterInQuestion(question: string, chapters: string[]): string | null {
+  const numbered = CHAPTER_NUMBER.exec(question)?.[1];
+  if (numbered) return chapterNumbered(NUMBER_WORDS[numbered.toLowerCase()] ?? Number(numbered), chapters);
+  const text = ` ${norm(question)} `;
+  return chapters.find((title) => !/^chapter \d+/.test(norm(title)) && text.includes(` ${norm(title)} `)) ?? null;
 }
 
 /** Order in which filters are relaxed when too few results come back (06 §4). */

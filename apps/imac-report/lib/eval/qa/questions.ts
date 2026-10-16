@@ -12,6 +12,8 @@ export const questionSchema = z.object({
   answer_location: z.array(z.string()).default([]),
   expected_answer: z.string().nullable(),
   must_include: z.array(z.string()).default([]),
+  /** Phrases that fail the answer if present — e.g. a value from another chart. */
+  must_not_include: z.array(z.string()).default([]),
   expected_values: z.array(z.object({ value: z.string(), unit: z.string().default("") })).default([]),
   expected_elements: z
     .array(z.object({ page: z.number().int(), type: z.string(), title: z.string().optional(), marker: z.string().optional() }))

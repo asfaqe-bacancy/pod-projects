@@ -4,7 +4,7 @@ import { buildHierarchicalChunks } from "@/lib/chunking/hierarchical";
 import { splitTable } from "@/lib/chunking/special-blocks";
 import { buildDocument } from "@/lib/ingest/prepare";
 import { extractMetadata, findCountries, findRegions, findYears, guessReportYear } from "@/lib/metadata/extract";
-import { relaxOnce, validateFilters } from "@/lib/metadata/validate";
+import { chapterInQuestion, matchChapter, relaxOnce, validateFilters } from "@/lib/metadata/validate";
 import { fixtureReport } from "./fixtures";
 
 describe("metadata", () => {
@@ -32,6 +32,23 @@ describe("metadata", () => {
     expect(filters).toEqual({ regions: ["SAR"], countries: ["IND"], years: [2025], chapter: "Chapter 1 Global Outlook" });
     expect(dropped).toEqual(["region:Atlantis", "country:XXX", "year:3000"]);
     expect(relaxOnce({ years: [2025], regions: ["SAR"] })).toEqual({ filters: { regions: ["SAR"] }, relaxed: "years" });
+  });
+
+  const chapters = ["Foreword", "Executive Summary", "Chapter 1. Global Outlook", "Chapter 3. A Rising Challenge: Sovereign Debt"];
+
+  it("resolves chapter references by number, word or title", () => {
+    expect(matchChapter("Chapter 3", chapters)).toBe("Chapter 3. A Rising Challenge: Sovereign Debt");
+    expect(matchChapter("ch. 3", chapters)).toBe("Chapter 3. A Rising Challenge: Sovereign Debt");
+    expect(matchChapter("chapter three", chapters)).toBe("Chapter 3. A Rising Challenge: Sovereign Debt");
+    expect(matchChapter("3", chapters)).toBe("Chapter 3. A Rising Challenge: Sovereign Debt");
+    expect(matchChapter("Global Outlook", chapters)).toBe("Chapter 1. Global Outlook");
+    expect(matchChapter("Chapter 9", chapters)).toBeNull();
+  });
+
+  it("finds a chapter the question names outright", () => {
+    expect(chapterInQuestion("What does Chapter 3 say about sovereign debt?", chapters)).toBe("Chapter 3. A Rising Challenge: Sovereign Debt");
+    expect(chapterInQuestion("What main risks does the executive summary highlight?", chapters)).toBe("Executive Summary");
+    expect(chapterInQuestion("What is the growth outlook for South Asia?", chapters)).toBeNull();
   });
 });
 

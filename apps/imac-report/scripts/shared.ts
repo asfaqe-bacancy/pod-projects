@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { createGemini, FALLBACK_MODELS, type Gemini, type RetryOptions } from "@pod/ai";
+import { createGemini, FALLBACK_MODELS, SCRIPT_RETRY, type Gemini } from "@pod/ai";
 import { readEnv } from "@pod/rag/app-env";
 import { sha256 } from "@pod/rag/hash";
 import { DOCUMENT, STRATEGY_IDS, type StrategyId } from "../lib/config";
@@ -12,11 +12,7 @@ export async function loadInputs() {
   return { data, pages, documentSha: sha256(data) };
 }
 
-/**
- * Free-tier keys allow ~5 requests a minute and 503s come in spikes. One patient
- * retry per model, then the client moves on to the next model in FALLBACK_MODELS.
- */
-export const SCRIPT_RETRY: RetryOptions = { attempts: 2, baseDelayMs: 10_000, maxWaitMs: 90_000 };
+export { SCRIPT_RETRY };
 
 export function optionalGemini(): Gemini | null {
   const { geminiApiKey } = readEnv();

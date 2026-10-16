@@ -80,7 +80,7 @@ try {
               ? 1
               : 0
             : null;
-          const verdict = await judgeCorrectness(services.gemini, { documentName: DOCUMENT_NAME, question: q.question, expectedAnswer: q.expected_answer ?? "", mustInclude: q.must_include, answer: answer.answer });
+          const verdict = await judgeCorrectness(services.gemini, { documentName: DOCUMENT_NAME, question: q.question, expectedAnswer: q.expected_answer ?? "", mustInclude: q.must_include, mustNotInclude: q.must_not_include, answer: answer.answer });
           r.correctness = verdict.score;
           r.correctnessReason = verdict.reason;
           if (!answer.refused) {

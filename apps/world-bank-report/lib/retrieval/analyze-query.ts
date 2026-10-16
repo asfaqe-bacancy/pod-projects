@@ -1,7 +1,7 @@
 import { Type, type Gemini } from "@pod/ai";
 import { z } from "zod";
 import { CONFIG } from "../config";
-import { validateFilters } from "../metadata/validate";
+import { chapterInQuestion, validateFilters } from "../metadata/validate";
 import { analyzePrompt } from "../prompts";
 import type { QueryAnalysis } from "../types";
 
@@ -51,8 +51,9 @@ const responseSchema = {
   required: ["intent", "rewrittenQuery", "subQueries", "filters"],
 };
 
-export function fallbackAnalysis(question: string): QueryAnalysis {
-  return { intent: "fact", rewrittenQuery: question, subQueries: [], filters: {}, fallback: true };
+export function fallbackAnalysis(question: string, chapters: string[] = []): QueryAnalysis {
+  const chapter = chapterInQuestion(question, chapters);
+  return { intent: "fact", rewrittenQuery: question, subQueries: [], filters: chapter ? { chapter } : {}, fallback: true };
 }
 
 export async function analyzeQuery(
@@ -70,6 +71,9 @@ export async function analyzeQuery(
       onUsage: (usage) => onUsage?.(usage.input + usage.output),
     });
     const { filters, dropped } = validateFilters(raw.filters as QueryAnalysis["filters"], { chapters });
+    // A chapter the question names outright wins over the model's guess.
+    const named = chapterInQuestion(question, chapters);
+    if (named) filters.chapter = named;
     const subQueries = raw.intent === "comparison" || raw.subQueries.length > 1
       ? raw.subQueries.map((q) => q.trim()).filter(Boolean).slice(0, CONFIG.retrieval.maxSubQueries)
       : [];
@@ -82,6 +86,6 @@ export async function analyzeQuery(
       dropped,
     };
   } catch {
-    return fallbackAnalysis(question);
+    return fallbackAnalysis(question, chapters);
   }
 }

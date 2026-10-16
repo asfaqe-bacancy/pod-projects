@@ -1,5 +1,6 @@
 import { Type, type Gemini, type Part } from "@pod/ai";
 import { z } from "zod";
+import { forbiddenMentions } from "./checks";
 
 /**
  * LLM-as-judge, shared by all POD evals: correctness against a reference
@@ -8,7 +9,7 @@ import { z } from "zod";
  * allows; the manual review in each app's 07/10 doc checks the judge itself.
  */
 
-export const JUDGE_PROMPT_VERSION = "v1";
+export const JUDGE_PROMPT_VERSION = "v2";
 
 const correctnessSchema = z.object({
   score: z.union([z.literal(0), z.literal(1), z.literal(2)]),
@@ -29,6 +30,7 @@ export async function judgeCorrectness(
     question,
     expectedAnswer,
     mustInclude,
+    mustNotInclude = [],
     answer,
     extraRules = [],
   }: {
@@ -36,16 +38,24 @@ export async function judgeCorrectness(
     question: string;
     expectedAnswer: string;
     mustInclude: string[];
+    /** Phrases that make the answer wrong if present (another region, a made-up figure). */
+    mustNotInclude?: string[];
     answer: string;
     extraRules?: string[];
   },
 ): Promise<CorrectnessVerdict> {
+  // Checked by string match first: certain, and it costs no model call.
+  const forbidden = forbiddenMentions(answer, mustNotInclude);
+  if (forbidden.length) {
+    return { score: 0, reason: `Mentions what it must not: ${forbidden.map((phrase) => `"${phrase}"`).join(", ")}.` };
+  }
+
   const prompt = `You are grading an answer to a question about the ${documentName}.
 
 Question: ${question}
 Reference answer: ${expectedAnswer}
 Required facts (must all appear, wording may differ): ${mustInclude.length ? mustInclude.map((fact) => `"${fact}"`).join("; ") : "(none listed)"}
-Candidate answer: ${answer}
+${mustNotInclude.length ? `Forbidden content (score 0 if the answer states any of it, in any wording): ${mustNotInclude.map((fact) => `"${fact}"`).join("; ")}\n` : ""}Candidate answer: ${answer}
 
 Score the candidate:
 - 2 = correct and complete: matches the reference and contains every required fact.

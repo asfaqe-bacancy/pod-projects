@@ -8,7 +8,7 @@
  */
 import { readFile, writeFile } from "node:fs/promises";
 import { parseArgs } from "node:util";
-import { createGemini } from "@pod/ai";
+import { createGemini, FALLBACK_MODELS, SCRIPT_RETRY } from "@pod/ai";
 import { requireEnv } from "@pod/rag/app-env";
 import { sha256 } from "@pod/rag/hash";
 import { DOCUMENT } from "../lib/config";
@@ -57,7 +57,7 @@ const parsed: ParsedReport = {
 
 if (!values["text-only"]) {
   const { geminiApiKey } = requireEnv("geminiApiKey");
-  const gemini = createGemini({ apiKey: geminiApiKey! });
+  const gemini = createGemini({ apiKey: geminiApiKey!, retry: SCRIPT_RETRY, fallbackModels: FALLBACK_MODELS });
   const only = pageList(values.pages);
   const result = await parsePagesToMarkdown(gemini, { data, textPages: layer.textPages, cacheDir: DOCUMENT.cacheDir, pages: only, force: values.force });
 

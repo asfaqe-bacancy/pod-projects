@@ -15,7 +15,7 @@ import { insertSections } from "../db/sections";
 import { guessReportYear } from "../metadata/extract";
 import { PARSE_PROMPT_VERSION, SUMMARY_PROMPT_VERSION, TABLE_LINE_PROMPT_VERSION, tableLinePrompt } from "../prompts";
 import { summariseTree } from "../structure/summaries";
-import { flattenTree } from "../structure/tree";
+import { flattenTree, type OutlineItem } from "../structure/tree";
 import type { ParsedReport, PreparedChunk } from "../types";
 import { buildDocument } from "./prepare";
 
@@ -33,6 +33,8 @@ import { buildDocument } from "./prepare";
 export interface IngestOptions {
   kind: RunKind;
   parsed: ParsedReport;
+  /** Section skeleton; defaults to the PDF bookmarks. */
+  outline?: OutlineItem[];
   summaries?: boolean;
   activate?: boolean;
   force?: boolean;
@@ -41,11 +43,11 @@ export interface IngestOptions {
 
 export async function ingest(
   { sql, embedder, gemini }: { sql: Sql; embedder: Embedder; gemini?: Gemini },
-  { kind, parsed, summaries = false, activate = false, force = false, log = console.log }: IngestOptions,
+  { kind, parsed, outline = parsed.outline, summaries = false, activate = false, force = false, log = console.log }: IngestOptions,
 ) {
   const reportYear = guessReportYear(parsed.textPages.slice(0, 6).join("\n"));
-  const structured = buildDocument(parsed, kind === "flat:text" ? "text" : "markdown");
-  const tree = kind === "flat:text" ? buildDocument(parsed, "markdown").tree : structured.tree;
+  const structured = buildDocument(parsed, kind === "flat:text" ? "text" : "markdown", outline);
+  const tree = kind === "flat:text" ? buildDocument(parsed, "markdown", outline).tree : structured.tree;
 
   const useLlm = Boolean(gemini) && kind === "hierarchical";
   const config = {
@@ -57,7 +59,11 @@ export async function ingest(
     summaries: kind === "hierarchical" && summaries ? SUMMARY_PROMPT_VERSION : null,
     reportYear,
   };
-  const hash = configHash({ ...config, source: sha256(JSON.stringify([parsed.textPages, parsed.markdownPages])).slice(0, 16) });
+  const hash = configHash({
+    ...config,
+    source: sha256(JSON.stringify([parsed.textPages, parsed.markdownPages])).slice(0, 16),
+    outline: sha256(JSON.stringify(outline)).slice(0, 16),
+  });
 
   const documentId = await upsertDocument(sql, { title: DOCUMENT.title, filename: DOCUMENT.filename, sha256: parsed.sha256, pageCount: parsed.pageCount });
   const existing = await findRun(sql, documentId, hash);

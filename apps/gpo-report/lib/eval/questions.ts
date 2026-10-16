@@ -14,6 +14,8 @@ export const questionSchema = z.object({
   category: z.enum(CATEGORIES),
   expected_answer: z.string().nullable(),
   must_include: z.array(z.string()).default([]),
+  /** Phrases that fail the answer if present — e.g. a figure from the wrong year. */
+  must_not_include: z.array(z.string()).default([]),
   /** 1-based PDF page indices; any one is enough for a hit. */
   expected_pages: z.array(z.number().int().positive()).default([]),
   notes: z.string().default(""),

@@ -19,6 +19,7 @@ import { scoreRetrieval, summarise, type QuestionResult } from "../lib/eval/scor
 import { ANSWER_PROMPT_VERSION, DOCUMENT_NAME, JUDGE_EXTRA_RULES } from "../lib/prompts";
 import { answerOnce } from "../lib/rag/answer";
 import { runRetrieval } from "../lib/retrieval/pipeline";
+import { SCRIPT_RETRY } from "@pod/ai";
 import { createServicesFromEnv } from "../lib/services";
 
 const { values } = parseArgs({
@@ -36,7 +37,7 @@ if (presets.some((p) => !PRESET_IDS.includes(p))) {
   process.exit(1);
 }
 const judge = !values["no-judge"];
-const services = createServicesFromEnv();
+const services = createServicesFromEnv(SCRIPT_RETRY);
 
 try {
   const runs = await getActiveRuns(services.sql);
@@ -87,6 +88,7 @@ try {
             question: q.question,
             expectedAnswer: q.expected_answer ?? "",
             mustInclude: q.must_include,
+            mustNotInclude: q.must_not_include,
             answer: answer.answer,
             extraRules: JUDGE_EXTRA_RULES,
           });

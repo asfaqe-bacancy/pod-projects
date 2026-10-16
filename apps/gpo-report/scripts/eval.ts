@@ -95,6 +95,7 @@ try {
         question: question.question,
         expectedAnswer: question.expected_answer ?? "",
         mustInclude: question.must_include,
+        mustNotInclude: question.must_not_include,
         answer: answer.answer,
       });
       result.correctness = verdict.score;

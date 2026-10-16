@@ -10,6 +10,8 @@ export const DOCUMENT = {
   filename: "world-bank-report.pdf",
   path: "data/world-bank-report.pdf",
   cacheDir: "data/cache",
+  /** Hand-checked outline that replaces the PDF bookmarks (optional). */
+  outlinePath: "data/outline.json",
 };
 
 export const SCHEMA = "worldbank";
@@ -48,8 +50,10 @@ export const DEFAULT_PRESET: PresetId = "B5";
 export const CONFIG = {
   parse: {
     model: GENERATION_MODEL,
-    pagesPerBatch: 5,
-    concurrency: 3,
+    // 15 pages a request keeps the whole report within one model's 20 a day;
+    // one batch at a time, since parallel batches only multiply free-tier retries.
+    pagesPerBatch: 15,
+    concurrency: 1,
     /** Fidelity thresholds (04 §4). */
     minNumericPrecision: 0.98,
     minCoverage: 0.9,
@@ -59,9 +63,11 @@ export const CONFIG = {
     child: { targetChars: 1600, maxChars: 2400 },
     tableMaxChars: 6000,
     /** Sections with these titles stay in the tree but are not retrieved. */
-    excludeTitles: /^(table of )?contents$|^abbreviations|^acronyms|^references$|^bibliography$/i,
+    excludeTitles: /^(summary of |table of )?contents$|^abbreviations|^acronyms|^references$|^bibliography$/i,
   },
-  embedding: { model: EMBEDDING_MODEL, dims: EMBEDDING_DIMENSIONS, batchSize: 50 },
+  // 20 chunks (~16k tokens) per request: the free embedding tier allows 30k tokens a minute,
+  // and 50 full-size chunks (~40k) can never fit inside it.
+  embedding: { model: EMBEDDING_MODEL, dims: EMBEDDING_DIMENSIONS, batchSize: 20 },
   retrieval: {
     candidatePool: 30,
     rrfK: 60,

@@ -191,9 +191,10 @@ const ENDS_SENTENCE = /[.!?:;"”’)\]]$/;
 /**
  * Stitches pages together: a paragraph that ends mid-sentence continues on
  * the next page; a table whose header repeats on the next page is one table;
- * a box with the same title continues.
+ * a box with the same title continues. Paragraphs don't run on into a page
+ * in `sectionStarts` (pages where the outline opens a new section).
  */
-export function joinPages(pages: Block[][]): Block[] {
+export function joinPages(pages: Block[][], sectionStarts: ReadonlySet<number> = new Set()): Block[] {
   const out: Block[] = [];
 
   for (const blocks of pages) {
@@ -203,6 +204,7 @@ export function joinPages(pages: Block[][]): Block[] {
         if (
           previous.kind === "paragraph" &&
           block.kind === "paragraph" &&
+          !sectionStarts.has(block.page) &&
           !ENDS_SENTENCE.test(previous.text.trim()) &&
           !/^@@/.test(block.text)
         ) {

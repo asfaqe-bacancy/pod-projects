@@ -9,7 +9,9 @@ import type { Candidate, QueryFilters } from "../types";
  * search returns fewer than `minFilteredResults`, the least reliable filter
  * is dropped and the search retried — contentTypes, then years, countries,
  * regions, chapter. A wrong inferred filter can narrow results, never empty
- * them. Every relaxation is recorded for the trace.
+ * them. What the stricter search found stays on top, so a short section the
+ * question names (an executive summary) still leads. Every relaxation is
+ * recorded for the trace.
  */
 export async function searchWithRelaxation(
   sql: Sql,
@@ -17,9 +19,12 @@ export async function searchWithRelaxation(
 ): Promise<{ candidates: Candidate[]; relaxed: string[]; appliedFilters: QueryFilters }> {
   let filters = args.filters;
   const relaxed: string[] = [];
+  let kept: Candidate[] = [];
 
   while (true) {
-    const candidates = await searchChunks(sql, { ...args, filters });
+    const found = await searchChunks(sql, { ...args, filters });
+    const seen = new Set(kept.map((c) => c.chunkId));
+    const candidates = [...kept, ...found.filter((c) => !seen.has(c.chunkId))];
     if (candidates.length >= CONFIG.retrieval.minFilteredResults || !hasFilters(filters)) {
       return { candidates, relaxed, appliedFilters: filters };
     }
@@ -27,5 +32,6 @@ export async function searchWithRelaxation(
     if (!next) return { candidates, relaxed, appliedFilters: filters };
     relaxed.push(next.relaxed);
     filters = next.filters;
+    kept = candidates;
   }
 }
