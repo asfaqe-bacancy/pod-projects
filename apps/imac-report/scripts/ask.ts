@@ -4,6 +4,7 @@ import { DEFAULT_PRESET, PRESET_IDS, type PresetId } from "../lib/config";
 import { getActiveRuns } from "../lib/db/runs";
 import { answerStream } from "../lib/rag/answer";
 import { createServicesFromEnv } from "../lib/services";
+import { SCRIPT_RETRY } from "./shared";
 
 const { values, positionals } = parseArgs({ allowPositionals: true, options: { preset: { type: "string", default: DEFAULT_PRESET }, trace: { type: "boolean", default: false } } });
 const question = positionals.join(" ").trim();
@@ -13,7 +14,7 @@ if (!question || !PRESET_IDS.includes(preset)) {
   process.exit(1);
 }
 
-const services = createServicesFromEnv();
+const services = createServicesFromEnv(SCRIPT_RETRY);
 try {
   const runs = await getActiveRuns(services.sql);
   for await (const event of answerStream(services, runs, question, { preset, source: "cli" })) {

@@ -8,7 +8,7 @@ import { CONFIG, DOCUMENT, type Representation, type StrategyId } from "../lib/c
 import { extractDocument } from "../lib/extract/run";
 import { ingest } from "../lib/ingest/pipeline";
 import { createServicesFromEnv } from "../lib/services";
-import { loadInputs, strategyList } from "./shared";
+import { loadInputs, SCRIPT_RETRY, strategyList } from "./shared";
 
 const { values } = parseArgs({
   options: {
@@ -24,7 +24,7 @@ const plan: [StrategyId, Representation][] = values.strategy
   ? [[strategyList(values.strategy, [])[0], (values.representation ?? "typed") as Representation]]
   : [["X0", "flat"], ["X1", "flat"], [CONFIG.extraction.chosen, "typed"]];
 
-const services = createServicesFromEnv();
+const services = createServicesFromEnv(SCRIPT_RETRY);
 try {
   const { data, pages, documentSha } = await loadInputs();
   for (const [strategy, representation] of plan) {

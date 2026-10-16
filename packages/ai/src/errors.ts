@@ -94,9 +94,15 @@ export function isQuotaExhausted(cause: unknown): boolean {
  * says how long to wait, that wait is used — unless it is longer than
  * `maxWaitMs`, in which case the error goes straight back to the caller.
  */
+export interface RetryOptions {
+  attempts?: number;
+  baseDelayMs?: number;
+  maxWaitMs?: number;
+}
+
 export async function withRetry<T>(
   operation: () => Promise<T>,
-  { attempts = 3, baseDelayMs = 700, maxWaitMs = 15_000 }: { attempts?: number; baseDelayMs?: number; maxWaitMs?: number } = {},
+  { attempts = 3, baseDelayMs = 700, maxWaitMs = 15_000 }: RetryOptions = {},
 ): Promise<T> {
   let lastError: GeminiError | null = null;
 

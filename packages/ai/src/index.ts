@@ -1,5 +1,5 @@
-export { GENERATION_MODEL, EMBEDDING_MODEL, EMBEDDING_DIMENSIONS } from "./models";
-export { GeminiError, QUOTA_MESSAGE, describeGeminiError, isQuotaExhausted, withRetry, type GeminiErrorKind } from "./errors";
+export { GENERATION_MODEL, EMBEDDING_MODEL, EMBEDDING_DIMENSIONS, FALLBACK_MODELS } from "./models";
+export { GeminiError, QUOTA_MESSAGE, describeGeminiError, isQuotaExhausted, withRetry, type GeminiErrorKind, type RetryOptions } from "./errors";
 export {
   createGemini,
   binaryPart,

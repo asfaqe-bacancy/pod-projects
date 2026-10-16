@@ -33,6 +33,12 @@ export function createDb(url: string, { max = 3 }: { max?: number } = {}): Sql {
     connect_timeout: 15,
     onnotice: () => {},
   });
+  // An ended pool must leave the cache, or the next createDb hands it back dead.
+  const end = sql.end.bind(sql);
+  sql.end = (options) => {
+    if (cache.get(url) === sql) cache.delete(url);
+    return end(options);
+  };
   cache.set(url, sql);
   return sql;
 }

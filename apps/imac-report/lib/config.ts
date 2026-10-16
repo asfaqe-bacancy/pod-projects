@@ -60,7 +60,9 @@ export const CONFIG = {
     renderDpi: 170,
     focusDpi: 300,
     cropPadding: 0.04,
-    concurrency: 3,
+    // One page at a time: free-tier keys allow 5 requests a minute, and parallel
+    // pages only multiply the retries a busy spell burns from the daily quota.
+    concurrency: 1,
   },
   chunk: { textTargetChars: 1200, flatTargetChars: 1600, flatOverlapChars: 200, wideTableColumns: 8 },
   embedding: { model: EMBEDDING_MODEL, dims: EMBEDDING_DIMENSIONS, batchSize: 50 },

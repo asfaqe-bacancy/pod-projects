@@ -1,4 +1,4 @@
-import { createGemini, createGeminiEmbedder, type Embedder, type Gemini } from "@pod/ai";
+import { createGemini, createGeminiEmbedder, FALLBACK_MODELS, type Embedder, type Gemini, type RetryOptions } from "@pod/ai";
 import { createDb, type Sql } from "@pod/db";
 import { CONFIG } from "./config";
 import { readEnv } from "./env";
@@ -20,10 +20,10 @@ export function createDbFromEnv(): Sql {
   return createDb(databaseUrl);
 }
 
-export function createAiFromEnv(): { gemini: Gemini; embedder: Embedder } {
+export function createAiFromEnv(retry?: RetryOptions): { gemini: Gemini; embedder: Embedder } {
   const { geminiApiKey } = readEnv();
   if (!geminiApiKey) throw new Error("GEMINI_API_KEY is not set.");
-  const gemini = createGemini({ apiKey: geminiApiKey, generationModel: CONFIG.generation.model });
+  const gemini = createGemini({ apiKey: geminiApiKey, generationModel: CONFIG.generation.model, retry, fallbackModels: FALLBACK_MODELS });
   const embedder = createGeminiEmbedder({
     sdk: gemini.sdk,
     model: CONFIG.embedding.model,
@@ -33,6 +33,6 @@ export function createAiFromEnv(): { gemini: Gemini; embedder: Embedder } {
   return { gemini, embedder };
 }
 
-export function createServicesFromEnv(): Services {
-  return { sql: createDbFromEnv(), ...createAiFromEnv() };
+export function createServicesFromEnv(retry?: RetryOptions): Services {
+  return { sql: createDbFromEnv(), ...createAiFromEnv(retry) };
 }

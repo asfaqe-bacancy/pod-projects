@@ -7,7 +7,7 @@ import {
   type Part,
   type SchemaUnion,
 } from "@google/genai";
-import { GeminiError, withRetry } from "./errors";
+import { GeminiError, QUOTA_MESSAGE, describeGeminiError, withRetry, type RetryOptions } from "./errors";
 import { GENERATION_MODEL } from "./models";
 
 /**
@@ -60,11 +60,44 @@ export interface Gemini {
 export function createGemini({
   apiKey,
   generationModel = GENERATION_MODEL,
+  retry,
+  fallbackModels = [],
+  onFallback = (from, to, error) => console.warn(`Gemini ${from}: ${error.kind} → trying ${to}`),
 }: {
   apiKey: string;
   generationModel?: string;
+  /** Overrides the retry policy — batch scripts can afford to wait out a per-minute limit. */
+  retry?: RetryOptions;
+  /**
+   * Models to try, in order, when a call's model is out of quota, rate limited
+   * or overloaded. Each has its own quota, so one running dry doesn't stop the app.
+   */
+  fallbackModels?: string[];
+  onFallback?: (from: string, to: string, error: GeminiError) => void;
 }): Gemini {
   const sdk = new GoogleGenAI({ apiKey });
+  /** Models whose daily quota ran out in this process — skipped until restart. */
+  const exhausted = new Set<string>();
+
+  async function withFallback<T>(first: string, call: (model: string) => Promise<T>): Promise<T> {
+    const chain = [first, ...fallbackModels.filter((m) => m !== first)];
+    const usable = chain.filter((m) => !exhausted.has(m));
+    if (usable.length === 0) throw new GeminiError(QUOTA_MESSAGE, false, { kind: "quota" });
+    let lastError: GeminiError | null = null;
+    for (const [i, model] of usable.entries()) {
+      try {
+        return await call(model);
+      } catch (cause) {
+        const error = describeGeminiError(cause);
+        if (error.kind !== "quota" && error.kind !== "rate_limit" && error.kind !== "busy") throw error;
+        if (error.kind === "quota") exhausted.add(model);
+        lastError = error;
+        const next = usable[i + 1];
+        if (next) onFallback(model, next, error);
+      }
+    }
+    throw lastError!;
+  }
 
   function contents(request: PromptRequest): Content[] {
     const parts =
@@ -100,9 +133,9 @@ export function createGemini({
   }
 
   async function generateText(request: PromptRequest): Promise<string> {
-    return withRetry(async () => {
+    return withFallback(request.model ?? generationModel, (model) => withRetry(async () => {
       const response = await sdk.models.generateContent({
-        model: request.model ?? generationModel,
+        model,
         contents: contents(request),
         config: config(request),
       });
@@ -112,7 +145,7 @@ export function createGemini({
       }
       report(request, response.usageMetadata);
       return text;
-    });
+    }, retry));
   }
 
   /**
@@ -120,10 +153,10 @@ export function createGemini({
    * and then becomes a caught error, never a broken screen.
    */
   async function generateJson<T>(request: JsonRequest<T>): Promise<T> {
-    return withRetry(
+    return withFallback(request.model ?? generationModel, (model) => withRetry(
       async () => {
         const response = await sdk.models.generateContent({
-          model: request.model ?? generationModel,
+          model,
           contents: contents(request),
           config: config(request, {
             responseMimeType: "application/json",
@@ -155,19 +188,19 @@ export function createGemini({
         report(request, response.usageMetadata);
         return value;
       },
-      { attempts: 2 },
-    );
+      { attempts: 2, ...retry },
+    ));
   }
 
   /** Streams text as it arrives, for anything a person reads live. */
   async function* streamText(request: PromptRequest): AsyncGenerator<string> {
-    const stream = await withRetry(() =>
+    const stream = await withFallback(request.model ?? generationModel, (model) => withRetry(() =>
       sdk.models.generateContentStream({
-        model: request.model ?? generationModel,
+        model,
         contents: contents(request),
         config: config(request),
       }),
-    );
+    ));
 
     let usage: GenerateContentResponseUsageMetadata | undefined;
     for await (const chunk of stream) {

@@ -19,6 +19,7 @@ import { loadImageParts } from "../lib/rag/images";
 import { runRetrieval } from "../lib/retrieval/pipeline";
 import { createServicesFromEnv } from "../lib/services";
 import type { ChartSeries, ElementSource } from "../lib/types";
+import { SCRIPT_RETRY } from "./shared";
 
 const { values } = parseArgs({ options: { presets: { type: "string", default: "M0,M1,M2,M3,M4" }, "no-judge": { type: "boolean", default: false }, only: { type: "string" }, category: { type: "string" } } });
 const presets = values.presets!.split(",").map((p) => p.trim()) as PresetId[];
@@ -27,7 +28,7 @@ if (presets.some((p) => !PRESET_IDS.includes(p))) {
   process.exit(1);
 }
 const judge = !values["no-judge"];
-const services = createServicesFromEnv();
+const services = createServicesFromEnv(SCRIPT_RETRY);
 
 function estimates(sources: ElementSource[]): string[] {
   return sources.flatMap((s) => (s.type === "chart" ? ((s.data?.series as ChartSeries[] | undefined) ?? []).flatMap((x) => x.points.filter((p) => p.valueSource === "estimated").map((p) => p.valueText)) : []));
